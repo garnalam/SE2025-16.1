@@ -6,4 +6,4 @@ B3 : composer install
 B4 : npm install --legacy-peer-deps
 Sau khi xong mở 2 terminal lên (Nhớ cd lại vào đúng folder vừa clone trên github về)
 B5 : Terminal thứ nhất chạy : npm run dev
-B6 : Terminal thứ hai chạy : composer install 
+B6 : Terminal thứ hai chạy : php artisan serve
