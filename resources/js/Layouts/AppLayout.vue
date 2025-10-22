@@ -35,15 +35,18 @@ const logout = () => {
 
         <div class="min-h-screen bg-gray-100">
             <nav class="bg-white border-b border-gray-100">
+                <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
                         <div class="flex">
+                            <!-- Logo -->
                             <div class="shrink-0 flex items-center">
                                 <Link :href="route('dashboard')">
                                     <ApplicationMark class="block h-9 w-auto" />
                                 </Link>
                             </div>
 
+                            <!-- Navigation Links -->
                             <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
@@ -56,8 +59,10 @@ const logout = () => {
                         </div>
 
                         <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            <div class="ms-3 relative">
-                                <Dropdown v-if="$page.props.jetstream.hasTeamFeatures" align="right" width="60">
+                            <!-- ===== BẮT ĐẦU KHỐI SỬA LỖI ===== -->
+                            <!-- Teams Dropdown: Chỉ hiển thị nếu người dùng có team -->
+                            <div class="ms-3 relative" v-if="$page.props.jetstream.hasTeamFeatures && $page.props.auth.user.current_team">
+                                <Dropdown align="right" width="60">
                                     <template #trigger>
                                         <span class="inline-flex rounded-md">
                                             <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
@@ -72,6 +77,7 @@ const logout = () => {
 
                                     <template #content>
                                         <div class="w-60">
+                                            <!-- Team Management -->
                                             <div class="block px-4 py-2 text-xs text-gray-400">
                                                 Quản lý Lớp học
                                             </div>
@@ -84,6 +90,7 @@ const logout = () => {
                                                 Tạo Lớp học mới
                                             </DropdownLink>
 
+                                            <!-- Team Switcher -->
                                             <template v-if="$page.props.auth.user.all_teams.length > 1">
                                                 <div class="border-t border-gray-200" />
 
@@ -109,7 +116,9 @@ const logout = () => {
                                     </template>
                                 </Dropdown>
                             </div>
-
+                            <!-- ===== KẾT THÚC KHỐI SỬA LỖI ===== -->
+                            
+                            <!-- Settings Dropdown -->
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
@@ -129,6 +138,7 @@ const logout = () => {
                                     </template>
 
                                     <template #content>
+                                        <!-- Account Management -->
                                         <div class="block px-4 py-2 text-xs text-gray-400">
                                             Quản lý Tài khoản
                                         </div>
@@ -143,6 +153,7 @@ const logout = () => {
 
                                         <div class="border-t border-gray-200" />
 
+                                        <!-- Authentication -->
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
                                                 Đăng xuất
@@ -153,6 +164,7 @@ const logout = () => {
                             </div>
                         </div>
 
+                        <!-- Hamburger -->
                         <div class="-me-2 flex items-center sm:hidden">
                             <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
                                 <svg class="size-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -164,11 +176,64 @@ const logout = () => {
                     </div>
                 </div>
 
-                </nav>
+                <!-- Responsive Navigation Menu -->
+                <!-- 
+                    LƯU Ý: File của bạn không có phần menu team cho mobile, 
+                    nếu có, bạn cũng cần thêm điều kiện v-if tương tự ở đó.
+                    Vì file gốc không có nên tôi giữ nguyên.
+                -->
+                <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
+                    <div class="pt-2 pb-3 space-y-1">
+                        <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
+                            Dashboard
+                        </ResponsiveNavLink>
+                    </div>
 
+                    <!-- Responsive Settings Options -->
+                    <div class="pt-4 pb-1 border-t border-gray-200">
+                        <div class="flex items-center px-4">
+                            <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 me-3">
+                                <img class="size-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
+                            </div>
+
+                            <div>
+                                <div class="font-medium text-base text-gray-800">
+                                    {{ $page.props.auth.user.name }}
+                                </div>
+                                <div class="font-medium text-sm text-gray-500">
+                                    {{ $page.props.auth.user.email }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 space-y-1">
+                            <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
+                                Hồ sơ
+                            </ResponsiveNavLink>
+
+                            <ResponsiveNavLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')" :active="route().current('api-tokens.index')">
+                                API Tokens
+                            </ResponsiveNavLink>
+
+                            <!-- Authentication -->
+                            <form method="POST" @submit.prevent="logout">
+                                <ResponsiveNavLink as="button">
+                                    Đăng xuất
+                                </ResponsiveNavLink>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Page Heading -->
             <header v-if="$slots.header" class="bg-white shadow">
-                </header>
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <slot name="header" />
+                </div>
+            </header>
 
+            <!-- Page Content -->
             <main>
                 <slot />
             </main>
