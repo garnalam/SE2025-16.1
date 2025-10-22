@@ -29,9 +29,16 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+    // Route dashboard mặc định (sẽ dành cho Teacher)
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    // --- THÊM ROUTE MỚI CHO STUDENT ---
+    Route::get('/student-dashboard', function () {
+        return Inertia::render('StudentDashboard');
+    })->name('student.dashboard');
+    // --- HẾT PHẦN THÊM MỚI ---
 
     // Route để TẠO bài đăng
     Route::post('/teams/{team}/posts', [PostController::class, 'store'])->name('posts.store');
