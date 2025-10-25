@@ -9,7 +9,6 @@ defineEmits(['update:modelValue']);
 
 const textarea = ref(null);
 
-
 onMounted(() => {
     if (textarea.value.hasAttribute('autofocus')) {
         textarea.value.focus();
