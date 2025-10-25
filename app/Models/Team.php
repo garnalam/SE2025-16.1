@@ -85,4 +85,9 @@ class Team extends JetstreamTeam
         // Định nghĩa mối quan hệ "Một Team có nhiều Post"
         return $this->hasMany(Post::class);
     }
+
+    public function topics(): HasMany
+    {
+        return $this->hasMany(Topic::class);
+    }
 }

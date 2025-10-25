@@ -10,7 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
-
+use Illuminate\Database\Eloquent\Relations\HasMany; // <-- THÊM DÒNG NÀY
 class User extends Authenticatable
 {
     use HasApiTokens;
@@ -66,5 +66,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function topics(): HasMany
+    {
+        return $this->hasMany(Topic::class);
+    }
+
+    public function pollVotes(): HasMany
+    {
+        return $this->hasMany(PollVote::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
     }
 }

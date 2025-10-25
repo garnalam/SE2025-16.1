@@ -8,8 +8,11 @@ use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Jetstream\Jetstream;
-use App\Http\Controllers\ClassroomController; // <-- THÊM DÒNG NÀY
-
+use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\TopicController;
+use App\Models\Topic; // <-- ĐÃ THÊM DÒNG NÀY
+use App\Http\Controllers\PollVoteController;
+use App\Http\Controllers\CommentController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -31,8 +34,7 @@ Route::middleware([
     'verified',
 ])->group(function () {
     
-    // ===== BẮT ĐẦU THAY ĐỔI =====
-    // Route dashboard "thông minh" dựa trên vai trò
+    // ===== LOGIC DASHBOARD CỦA BẠN (GIỮ NGUYÊN) =====
     Route::get('/dashboard', function () {
         $user = auth()->user();
         
@@ -48,30 +50,65 @@ Route::middleware([
 
     })->name('dashboard');
 
-    // Route cho học sinh tham gia lớp học
+    // Route cho học sinh tham gia lớp học (GIỮ NGUYÊN)
     Route::post('/classrooms/join', [ClassroomController::class, 'join'])
         ->name('classrooms.join');
-    // ===== KẾT THÚC THAY ĐỔI =====
 
 
-    // Route để TẠO bài đăng
-    Route::post('/teams/{team}/posts', [PostController::class, 'store'])->name('posts.store');
+    // Route để TẠO bài đăng (GIỮ NGUYÊN - SẼ SỬA Ở BƯỚC SAU)
+    Route::post('/topics/{topic}/posts', [PostController::class, 'store'])->name('posts.store');
+    
+    // ===== ROUTES QUẢN LÝ CHỦ ĐỀ (TOPIC) =====
+    Route::post('/teams/{team}/topics', [TopicController::class, 'store'])->name('topics.store');
+    
+    // Cập nhật chủ đề (sẽ dùng ở bước sau)
+    Route::put('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
 
-    // ROUTE MỚI CHO TRANG FEED (Đã cải tiến với Route-Model Binding)
-    Route::get('/teams/{team}/feed', function (Team $team) { // <-- Thay đổi ở đây
+    // Xóa chủ đề
+    Route::delete('/topics/{topic}', [TopicController::class, 'destroy'])->name('topics.destroy');
+
+    // (QUAN TRỌNG) Route để xem các bài đăng BÊN TRONG chủ đề
+    Route::get('/topics/{topic}', [TopicController::class, 'show'])->name('topics.show');
+
+    Route::patch('/topics/{topic}/lock', [TopicController::class, 'toggleLock'])->name('topics.toggleLock');
+
+    Route::post('/poll-votes/{pollOption}', [PollVoteController::class, 'store'])->name('poll-votes.store');
+
+    // ===== ROUTES BÌNH LUẬN (MỚI) =====
+// Tạo một bình luận mới (cho 1 bài đăng)
+Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
+
+// ===== ROUTE CẬP NHẬT BÀI ĐĂNG (MỚI) =====
+// Tắt/Mở bình luận cho 1 bài đăng
+Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleComments'])->name('posts.toggleComments');
+    // ===== KẾT THÚC ROUTES TOPIC =====
+
+
+    // ===== ROUTE TRANG FEED (ĐÃ SỬA) =====
+    // Trang này giờ sẽ hiển thị DANH SÁCH CHỦ ĐỀ (TOPICS)
+    Route::get('/teams/{team}/feed', function (Team $team) {
         if (Gate::denies('view', $team)) {
             abort(403);
         }
+        
+        // Tải danh sách chủ đề (topics) thay vì bài đăng (posts)
+        $team->load('topics.user'); // Eager load topics và người tạo
+
         return Inertia::render('Teams/Feed', [
             'team' => $team,
-            'posts' => $team->posts()->with('user')->latest()->get(),
+            'topics' => $team->topics, // <-- Truyền "topics"
             'permissions' => [
+                // Giữ permission cũ
                 'canAddTeamMembers' => Gate::check('addTeamMember', $team),
+                
+                // Thêm permission mới để kiểm tra ai được tạo chủ đề
+                'canCreateTopics' => Gate::check('create', [Topic::class, $team]),
             ],
         ]);
     })->name('teams.feed');
 
-    // ROUTE CÀI ĐẶT (Đã cải tiến và bổ sung đầy đủ permissions)
+
+    // ===== ROUTE CÀI ĐẶT LỚP HỌC (GIỮ NGUYÊN) =====
     Route::get('/teams/{team}', function (Team $team) { // <-- Thay đổi ở đây
         if (Gate::denies('view', $team)) {
             abort(403);
@@ -81,7 +118,6 @@ Route::middleware([
             'availableRoles' => array_values(Jetstream::$roles),
             'availablePermissions' => Jetstream::$permissions,
             'defaultPermissions' => Jetstream::$defaultPermissions,
-            // ✅ ĐÂY LÀ PHẦN QUAN TRỌNG BỊ THIẾU
             'permissions' => [
                 'canAddTeamMembers' => Gate::check('addTeamMember', $team),
                 'canDeleteTeam' => Gate::check('delete', $team),
@@ -93,4 +129,3 @@ Route::middleware([
         ]);
     })->name('teams.show');
 });
-
