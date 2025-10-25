@@ -73,43 +73,38 @@ class TopicController extends Controller
     /**
      * Hiển thị một chủ đề cụ thể và các bài đăng bên trong nó.
      */
-    public function show(Request $request, Topic $topic)
+public function show(Request $request, Topic $topic)
     {
         $team = $topic->team;
         if (Gate::denies('view', $team)) {
             abort(403);
         }
 
-        // 3. LOGIC TẢI DỮ LIỆU (Giữ nguyên)
+        // 3. LOGIC TẢI DỮ LIỆU (ĐÃ SỬA)
         $topic->load(['posts' => function ($query) {
             $query->with([
                 'user', // Tải người đăng
                 'pollOptions.votes', // Tải poll
                 
-                // (MỚI) Tải bình luận
+                // Tải bình luận
                 'parentComments.user', // Tải bình luận gốc + người đăng
                 'parentComments.replies.user', // Tải replies + người trả lời
                 
-            ])->latest();
+                // ===== THÊM DÒNG NÀY =====
+                'attachments' // Tải file đính kèm (cho Bài tập/Tài liệu)
+                // ==========================
+
+            ])->latest(); // Sắp xếp bài đăng mới nhất lên đầu
         }]);
 
         // 4. Trả về trang Vue
         return Inertia::render('Topics/Show', [
             'team' => $team,
             'topic' => $topic,
-            
-            // ===== ĐÃ SỬA LỖI =====
-            // Chỉ cần truyền $topic->posts
-            // Inertia sẽ tự động chuyển 'parentComments' thành 'parent_comments' (snake_case)
-            // khi gửi sang Vue.
-            'posts' => $topic->posts,
-            // ======================
-
+            'posts' => $topic->posts, // Truyền posts đã load đầy đủ
             'authUserId' => Auth::id(),
             'permissions' => [
-                // SỬA DÒNG NÀY:
                 'canCreatePosts' => $request->user()->belongsToTeam($team),
-                // DÒNG BÊN DƯỚI GIỮ NGUYÊN:
                 'canManageTopics' => Gate::check('update', $topic),
             ]
         ]);
