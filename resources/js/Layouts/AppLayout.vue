@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue'; // <-- Thêm 'computed'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'; // <-- Thêm 'usePage'
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -14,6 +14,19 @@ defineProps({
 
 const showingNavigationDropdown = ref(false);
 
+// ===== BẮT ĐẦU THAY ĐỔI =====
+// Lấy thông tin người dùng từ $page props
+const page = usePage();
+const userRole = computed(() => page.props.auth.user.role);
+const allTeams = computed(() => page.props.auth.user.all_teams || []);
+const currentTeam = computed(() => page.props.auth.user.current_team || null);
+const currentTeamId = computed(() => page.props.auth.user.current_team_id || null);
+
+// Lấy config của Jetstream từ $page props
+const hasTeamFeatures = computed(() => page.props.jetstream.hasTeamFeatures);
+const canCreateTeams = computed(() => page.props.jetstream.canCreateTeams);
+// ===== KẾT THÚC THAY ĐỔI =====
+
 const switchToTeam = (team) => {
     router.put(route('current-team.update'), {
         team_id: team.id,
@@ -24,6 +37,11 @@ const switchToTeam = (team) => {
 
 const logout = () => {
     router.post(route('logout'));
+};
+
+// Hàm mới để điều hướng đến trang tham gia lớp học
+const navigateToJoinClassroom = () => {
+    router.get(route('dashboard')); // Điều hướng về dashboard (nơi có form)
 };
 </script>
 
@@ -52,21 +70,24 @@ const logout = () => {
                                     Dashboard
                                 </NavLink>
                                 
-                                <NavLink v-if="$page.props.auth.user.current_team" :href="route('teams.feed', $page.props.auth.user.current_team)" :active="route().current('teams.feed')">
+                                <!-- Link "Lớp học hiện tại" (Feed) -->
+                                <!-- Chỉ hiển thị nếu người dùng đang ở trong 1 lớp học (team) -->
+                                <NavLink v-if="currentTeam" :href="route('teams.feed', currentTeam)" :active="route().current('teams.feed')">
                                     Lớp học hiện tại
                                 </NavLink>
                             </div>
                         </div>
 
                         <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            <!-- ===== BẮT ĐẦU KHỐI SỬA LỖI ===== -->
-                            <!-- Teams Dropdown: Chỉ hiển thị nếu người dùng có team -->
-                            <div class="ms-3 relative" v-if="$page.props.jetstream.hasTeamFeatures && $page.props.auth.user.current_team">
+                            
+                            <!-- Teams Dropdown (Đã cập nhật logic) -->
+                            <div class="ms-3 relative" v-if="hasTeamFeatures">
                                 <Dropdown align="right" width="60">
                                     <template #trigger>
                                         <span class="inline-flex rounded-md">
                                             <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
-                                                {{ $page.props.auth.user.current_team.name }}
+                                                <!-- Hiển thị tên team hiện tại, nếu không có thì hiển thị "Chọn Lớp" -->
+                                                {{ currentTeam ? currentTeam.name : 'Chọn Lớp' }}
 
                                                 <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
@@ -77,32 +98,53 @@ const logout = () => {
 
                                     <template #content>
                                         <div class="w-60">
-                                            <!-- Team Management -->
-                                            <div class="block px-4 py-2 text-xs text-gray-400">
-                                                Quản lý Lớp học
-                                            </div>
+                                            
+                                            <!-- ===== LOGIC PHÂN QUYỀN CHO GIÁO VIÊN ===== -->
+                                            <template v-if="userRole === 'teacher' || userRole === 'admin'">
+                                                <div class="block px-4 py-2 text-xs text-gray-400">
+                                                    Quản lý Lớp học (GV)
+                                                </div>
 
-                                            <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
-                                                Cài đặt Lớp học
-                                            </DropdownLink>
+                                                <!-- Link Cài đặt Lớp (chỉ hiển thị nếu GV đang ở trong 1 lớp) -->
+                                                <DropdownLink v-if="currentTeam" :href="route('teams.show', currentTeam)">
+                                                    Cài đặt Lớp học
+                                                </DropdownLink>
 
-                                            <DropdownLink v-if="$page.props.jetstream.canCreateTeams" :href="route('teams.create')">
-                                                Tạo Lớp học mới
-                                            </DropdownLink>
+                                                <!-- Link Tạo Lớp học (chỉ GV mới thấy) -->
+                                                <DropdownLink v-if="canCreateTeams" :href="route('teams.create')">
+                                                    Tạo Lớp học mới
+                                                </DropdownLink>
+                                            </template>
+                                            
+                                            <!-- ===== LOGIC PHÂN QUYỀN CHO HỌC SINH ===== -->
+                                            <template v-if="userRole === 'student'">
+                                                <div class="block px-4 py-2 text-xs text-gray-400">
+                                                    Lớp học (HS)
+                                                </div>
 
-                                            <!-- Team Switcher -->
-                                            <template v-if="$page.props.auth.user.all_teams.length > 1">
+                                                <!-- Link Tham gia Lớp học (chỉ HS mới thấy) -->
+                                                <!-- Dùng as="button" và @click để điều hướng -->
+                                                <DropdownLink as="button" @click="navigateToJoinClassroom">
+                                                    Tham gia Lớp học
+                                                </DropdownLink>
+                                            </template>
+
+
+                                            <!-- ===== PHẦN CHUNG: CHUYỂN LỚP HỌC ===== -->
+                                            <!-- Hiển thị nếu người dùng (cả GV và HS) thuộc ít nhất 1 lớp -->
+                                            <!-- ===== DÒNG SỬA 1 ===== -->
+                                            <template v-if="allTeams.length > 0">
                                                 <div class="border-t border-gray-200" />
 
                                                 <div class="block px-4 py-2 text-xs text-gray-400">
                                                     Chuyển Lớp học
                                                 </div>
 
-                                                <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
+                                                <template v-for="team in allTeams" :key="team.id">
                                                     <form @submit.prevent="switchToTeam(team)">
                                                         <DropdownLink as="button">
                                                             <div class="flex items-center">
-                                                                <svg v-if="team.id == $page.props.auth.user.current_team_id" class="me-2 size-5 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                <svg v-if="team.id == currentTeamId" class="me-2 size-5 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                 </svg>
 
@@ -116,9 +158,8 @@ const logout = () => {
                                     </template>
                                 </Dropdown>
                             </div>
-                            <!-- ===== KẾT THÚC KHỐI SỬA LỖI ===== -->
                             
-                            <!-- Settings Dropdown -->
+                            <!-- Settings Dropdown (Giữ nguyên) -->
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
@@ -164,7 +205,7 @@ const logout = () => {
                             </div>
                         </div>
 
-                        <!-- Hamburger -->
+                        <!-- Hamburger (Giữ nguyên) -->
                         <div class="-me-2 flex items-center sm:hidden">
                             <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
                                 <svg class="size-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -177,19 +218,19 @@ const logout = () => {
                 </div>
 
                 <!-- Responsive Navigation Menu -->
-                <!-- 
-                    LƯU Ý: File của bạn không có phần menu team cho mobile, 
-                    nếu có, bạn cũng cần thêm điều kiện v-if tương tự ở đó.
-                    Vì file gốc không có nên tôi giữ nguyên.
-                -->
                 <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
                     <div class="pt-2 pb-3 space-y-1">
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
                         </ResponsiveNavLink>
+                        
+                        <!-- Link "Lớp học hiện tại" (Feed) cho mobile -->
+                        <ResponsiveNavLink v-if="currentTeam" :href="route('teams.feed', currentTeam)" :active="route().current('teams.feed')">
+                            Lớp học hiện tại
+                        </ResponsiveNavLink>
                     </div>
 
-                    <!-- Responsive Settings Options -->
+                    <!-- Responsive Settings Options (Giữ nguyên) -->
                     <div class="pt-4 pb-1 border-t border-gray-200">
                         <div class="flex items-center px-4">
                             <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 me-3">
@@ -221,6 +262,54 @@ const logout = () => {
                                     Đăng xuất
                                 </ResponsiveNavLink>
                             </form>
+
+                            <!-- ===== PHÂN QUYỀN TRÊN MENU MOBILE ===== -->
+                            <div class="border-t border-gray-200 mt-2 pt-2">
+                                <!-- GIÁO VIÊN (Teacher) -->
+                                <template v-if="userRole === 'teacher' || userRole === 'admin'">
+                                    <div class="block px-4 py-2 text-xs text-gray-400">
+                                        Quản lý Lớp học (GV)
+                                    </div>
+                                    <ResponsiveNavLink v-if="currentTeam" :href="route('teams.show', currentTeam)" :active="route().current('teams.show')">
+                                        Cài đặt Lớp học
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink v-if="canCreateTeams" :href="route('teams.create')" :active="route().current('teams.create')">
+                                        Tạo Lớp học mới
+                                    </ResponsiveNavLink>
+                                </template>
+
+                                <!-- HỌC SINH (Student) -->
+                                <template v-if="userRole === 'student'">
+                                    <div class="block px-4 py-2 text-xs text-gray-400">
+                                        Lớp học (HS)
+                                    </div>
+                                    <ResponsiveNavLink as="button" @click="navigateToJoinClassroom">
+                                        Tham gia Lớp học
+                                    </ResponsiveNavLink>
+                                </template>
+
+                                <!-- CHUNG: Chuyển Lớp học -->
+                                <!-- ===== DÒNG SỬA 2 ===== -->
+                                <template v-if="allTeams.length > 0">
+                                    <div class="border-t border-gray-200 mt-2 pt-2" />
+                                    <div class="block px-4 py-2 text-xs text-gray-400">
+                                        Chuyển Lớp học
+                                    </div>
+                                    <template v-for="team in allTeams" :key="team.id">
+                                        <form @submit.prevent="switchToTeam(team)">
+                                            <ResponsiveNavLink as="button">
+                                                <div class="flex items-center">
+                                                    <svg v-if="team.id == currentTeamId" class="me-2 size-5 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <div>{{ team.name }}</div>
+                                                </div>
+                                            </ResponsiveNavLink>
+                                        </form>
+                                    </template>
+                                </template>
+                            </div>
+                            <!-- ===== KẾT THÚC PHÂN QUYỀN MOBILE ===== -->
                         </div>
                     </div>
                 </div>
@@ -240,3 +329,4 @@ const logout = () => {
         </div>
     </div>
 </template>
+

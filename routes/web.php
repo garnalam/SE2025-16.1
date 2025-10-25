@@ -8,6 +8,7 @@ use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Jetstream\Jetstream;
+use App\Http\Controllers\ClassroomController; // <-- THÊM DÒNG NÀY
 
 /*
 |--------------------------------------------------------------------------
@@ -29,16 +30,29 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    // Route dashboard mặc định (sẽ dành cho Teacher)
+    
+    // ===== BẮT ĐẦU THAY ĐỔI =====
+    // Route dashboard "thông minh" dựa trên vai trò
     Route::get('/dashboard', function () {
+        $user = auth()->user();
+        
+        if ($user->role === 'student') {
+            return Inertia::render('StudentDashboard');
+        } elseif ($user->role === 'teacher' || $user->role === 'admin') {
+            // Giả sử teacher và admin dùng chung Dashboard
+            return Inertia::render('Dashboard');
+        }
+        
+        // Mặc định (ví dụ: cho vai trò không xác định)
         return Inertia::render('Dashboard');
+
     })->name('dashboard');
 
-    // --- THÊM ROUTE MỚI CHO STUDENT ---
-    Route::get('/student-dashboard', function () {
-        return Inertia::render('StudentDashboard');
-    })->name('student.dashboard');
-    // --- HẾT PHẦN THÊM MỚI ---
+    // Route cho học sinh tham gia lớp học
+    Route::post('/classrooms/join', [ClassroomController::class, 'join'])
+        ->name('classrooms.join');
+    // ===== KẾT THÚC THAY ĐỔI =====
+
 
     // Route để TẠO bài đăng
     Route::post('/teams/{team}/posts', [PostController::class, 'store'])->name('posts.store');
@@ -79,3 +93,4 @@ Route::middleware([
         ]);
     })->name('teams.show');
 });
+
