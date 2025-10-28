@@ -12,8 +12,6 @@ import UpdateTeamNameForm from '@/Pages/Teams/Partials/UpdateTeamNameForm.vue';
 
 import FormSection from '@/Components/FormSection.vue'; // <-- THÊM MỚI
 
-
-
 // Gán props để có thể dùng trong hàm copyToClipboard
 
 const props = defineProps({ // <-- CHỈNH SỬA DÒNG NÀY

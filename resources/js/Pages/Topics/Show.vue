@@ -8,12 +8,16 @@ import PollDisplay from '@/Pages/Topics/Partials/PollDisplay.vue';
 import CommentSection from '@/Pages/Topics/Partials/CommentSection.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
+// --- THÊM DÒNG IMPORT NÀY ---
+import AssignmentView from '@/Pages/Teams/Partials/AssignmentView.vue'; 
+
 const props = defineProps({
     team: Object,
     topic: Object,
     posts: Array,
     permissions: Object,
     authUserId: Number, 
+    userSubmissions: Object, // <-- THÊM PROP NÀY
 });
 
 // TÍNH TOÁN CÁC BIẾN MỚI
@@ -42,7 +46,7 @@ const toggleLock = () => {
     });
 };
 
-// HÀM FORMAT NGÀY (Lấy từ file Show.vue trước đó của bạn)
+// HÀM FORMAT NGÀY
 const formatMyDate = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -80,13 +84,11 @@ const formatMyDate = (isoString) => {
             <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
                 
                 <div v-if="showCreatePostForm">
-                    <!-- ===== THÊM PROP can-manage-topics VÀO DÒNG NÀY ===== -->
                     <CreatePostForm 
                         :team="team" 
                         :topic="topic" 
                         :can-manage-topics="canManageTopics" 
                     />
-                    <!-- ==================================================== -->
                     <SectionBorder />
                 </div>
                 <div v-else-if="topic.is_locked && canCreatePosts" 
@@ -106,86 +108,67 @@ const formatMyDate = (isoString) => {
     
                         <div v-if="posts.length > 0" class="space-y-4">
                             
-                            <!-- Vòng lặp v-for (Đã cập nhật ở lần trước) -->
-                            <div v-for="post in posts" :key="post.id" class="bg-white shadow-sm rounded-lg p-4">
+                            <div v-for="post in posts" :key="post.id">
                                 
-                                <div class="flex items-center mb-3">
-                                    <img class="h-8 w-8 rounded-full object-cover" :src="post.user.profile_photo_url" :alt="post.user.name">
-                                    <div class="ml-3">
-                                        <div class="font-medium text-gray-900">{{ post.user.name }}</div>
-                                        <div class="text-sm text-gray-500">{{ formatMyDate(post.created_at) }}</div>
-                                    </div>
-                                </div>
+                                <AssignmentView
+                                    v-if="post.post_type === 'assignment'"
+                                    :post="post"
+                                    :can-manage-topics="canManageTopics"
+                                    :user-submission="userSubmissions[post.id]"
+                                />
 
-                                <div class="content-container space-y-2">
+                                <div v-else class="bg-white shadow-sm rounded-lg p-4">
                                     
-                                    <p v-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
-                                        {{ post.content }}
-                                    </p>
+                                    <div class="flex items-center mb-3">
+                                        <img class="h-8 w-8 rounded-full object-cover" :src="post.user.profile_photo_url" :alt="post.user.name">
+                                        <div class="ml-3">
+                                            <div class="font-medium text-gray-900">{{ post.user.name }}</div>
+                                            <div class="text-sm text-gray-500">{{ formatMyDate(post.created_at) }}</div>
+                                        </div>
+                                    </div>
 
-                                    <PollDisplay 
-                                        v-else-if="post.post_type === 'poll'"
+                                    <div class="content-container space-y-2">
+                                        
+                                        <p v-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
+                                            {{ post.content }}
+                                        </p>
+
+                                        <PollDisplay 
+                                            v-else-if="post.post_type === 'poll'"
+                                            :post="post"
+                                            :authUserId="authUserId"
+                                        />
+
+                                        <div v-else-if="post.post_type === 'material'" class="space-y-2">
+                                            <h3 class="font-bold text-lg text-indigo-700">📚 Tài liệu mới</h3>
+                                            <p class="whitespace-pre-wrap">{{ post.content }}</p> 
+                                            <div v-if="post.attachments && post.attachments.length > 0">
+                                                <strong>File đính kèm:</strong>
+                                                <ul class="list-disc pl-5 mt-1 space-y-1">
+                                                    <li v-for="file in post.attachments" :key="file.id">
+                                                        <a 
+                                                            :href="'/storage/' + file.path" 
+                                                            target="_blank" 
+                                                            class="text-blue-600 hover:underline hover:text-blue-800"
+                                                        >
+                                                            {{ file.original_name }}
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        </div>
+
+                                    <CommentSection
                                         :post="post"
+                                        :topic="topic"
                                         :authUserId="authUserId"
                                     />
-
-                                    <div v-else-if="post.post_type === 'material'" class="space-y-2">
-                                        <h3 class="font-bold text-lg text-indigo-700">📚 Tài liệu mới</h3>
-                                        <p class="whitespace-pre-wrap">{{ post.content }}</p> 
-                                        <div v-if="post.attachments && post.attachments.length > 0">
-                                            <strong>File đính kèm:</strong>
-                                            <ul class="list-disc pl-5 mt-1 space-y-1">
-                                                <li v-for="file in post.attachments" :key="file.id">
-                                                    <a 
-                                                        :href="'/storage/' + file.path" 
-                                                        target="_blank" 
-                                                        class="text-blue-600 hover:underline hover:text-blue-800"
-                                                    >
-                                                        {{ file.original_name }}
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-
-                                    <div v-else-if="post.post_type === 'assignment'" class="space-y-2">
-                                        <h3 class="font-bold text-lg text-green-700">🧑‍💻 Bài tập: {{ post.title }}</h3>
-                                        
-                                        <p class="whitespace-pre-wrap">{{ post.content }}</p> 
-
-                                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 border-t pt-2 mt-2">
-                                            <strong v-if="post.max_points">
-                                                Điểm tối đa: {{ post.max_points }}
-                                            </strong>
-                                            <strong v-if="post.due_date" class="text-red-600">
-                                                Hạn nộp: {{ formatMyDate(post.due_date) }}
-                                            </strong>
-                                        </div>
-
-                                        <div v-if="post.attachments && post.attachments.length > 0" class="mt-2">
-                                            <strong>File đính kèm:</strong>
-                                            <ul class="list-disc pl-5 mt-1 space-y-1">
-                                                <li v-for="file in post.attachments" :key="file.id">
-                                                    <a 
-                                                        :href="'/storage/' + file.path"
-                                                        target="_blank" 
-                                                        class="text-blue-600 hover:underline hover:text-blue-800"
-                                                    >
-                                                        {{ file.original_name }}
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
                                 </div>
-
-                                <CommentSection
-                                    :post="post"
-                                    :topic="topic"
-                                    :authUserId="authUserId"
-                                />
                             </div>
-                        </div>
+
+                            </div>
                     
                         <div v-else class="text-center text-gray-500 py-6">
                             Chưa có bài đăng nào trong chủ đề này.
@@ -198,4 +181,3 @@ const formatMyDate = (isoString) => {
         </div>
     </AppLayout>
 </template>
-
