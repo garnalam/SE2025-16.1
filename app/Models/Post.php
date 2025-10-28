@@ -101,4 +101,8 @@ class Post extends Model
     {
         return $this->morphMany(Attachment::class, 'attachable');
     }
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class);
+    }
 }

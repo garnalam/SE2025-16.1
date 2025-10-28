@@ -13,6 +13,8 @@ use App\Http\Controllers\TopicController;
 use App\Models\Topic; // <-- ĐÃ THÊM DÒNG NÀY
 use App\Http\Controllers\PollVoteController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\SubmissionController; // <-- HÃY THÊM DÒNG NÀY
+use App\Models\SubmissionFile; // <-- THÊM DÒNG NÀY
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -129,3 +131,18 @@ Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleCom
         ]);
     })->name('teams.show');
 });
+
+// Route cho học sinh nộp bài
+Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
+    ->name('submissions.store');
+
+// Route cho giáo viên xem danh sách bài nộp và chấm điểm
+Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])
+    ->name('submissions.index');
+
+// Route cho giáo viên chấm điểm (cập nhật)
+Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])
+    ->name('submissions.grade');
+// Route mới để giáo viên download file
+Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])
+    ->name('submissions.downloadFile');
