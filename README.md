@@ -25,6 +25,8 @@ Vui lòng làm theo các bước sau để cài đặt và chạy dự án local
 Mở terminal, di chuyển đến thư mục bạn muốn lưu project và chạy lệnh sau:
 
 git clone https://github.com/garnalam/SE2025-16.1.git
+
+
 cd SE2025-16.1
 
 
@@ -55,11 +57,17 @@ Mở file .env vừa tạo và cập nhật các trường sau:
 APP_URL=http://localhost:8000
 
 # Cấu hình kết nối MySQL
+
 DB_CONNECTION=mysql
+
 DB_HOST=127.0.0.1
+
 DB_PORT=3306
+
 DB_DATABASE=laravel  # <- Tên database bạn vừa tạo ở B2
+
 DB_USERNAME=root     # <- User của MySQL (mặc định của XAMPP là 'root')
+
 DB_PASSWORD=        # <- Mật khẩu của MySQL (mặc định của XAMPP là rỗng)
 
 
@@ -85,12 +93,14 @@ npm install
 Chạy các lệnh sau để hoàn tất việc thiết lập cơ sở dữ liệu và liên kết lưu trữ file.
 
 Chạy Database Migrations:
+
 Lệnh này sẽ tạo tất cả các bảng cần thiết trong database của bạn.
 
 php artisan migrate
 
 
 Tạo Symbolic Link (Storage):
+
 Lệnh này rất quan trọng. Nó tạo một lối tắt từ public/storage đến storage/app/public, cho phép ứng dụng hiển thị các file đã được upload (như ảnh đại diện, file bài tập).
 
 php artisan storage:link
@@ -101,18 +111,21 @@ php artisan storage:link
 Để chạy dự án, bạn cần mở hai cửa sổ terminal riêng biệt tại thư mục gốc của dự án (SE2025-16.1).
 
 Terminal 1: Chạy Vite (Frontend)
+
 Biên dịch assets (CSS/JS) và theo dõi thay đổi (hot-reload).
 
 npm run dev
 
 
 Terminal 2: Chạy Server (Backend)
+
 Khởi động server Laravel (mặc định ở cổng 8000).
 
 php artisan serve
 
 
 Sau khi cả hai terminal đều chạy thành công, bạn có thể truy cập ứng dụng tại:
+
 http://localhost:8000
 
 🛠️ Công nghệ Sử dụng
