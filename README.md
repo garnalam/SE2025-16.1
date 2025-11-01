@@ -25,6 +25,8 @@ Vui lòng làm theo các bước sau để cài đặt và chạy dự án local
 Mở terminal, di chuyển đến thư mục bạn muốn lưu project và chạy lệnh sau:
 
 git clone https://github.com/garnalam/SE2025-16.1.git
+
+
 cd SE2025-16.1
 
 
