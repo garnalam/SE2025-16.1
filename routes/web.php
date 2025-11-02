@@ -1,5 +1,5 @@
 <?php
-
+use App\Models\Submission;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -9,10 +9,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Jetstream\Jetstream;
 use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\StudentClassroomController; // <-- THÊM DÒNG NÀY
 use App\Http\Controllers\TopicController;
 use App\Models\Topic; // <-- ĐÃ THÊM DÒNG NÀY
 use App\Http\Controllers\PollVoteController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\SubmissionController; // <-- HÃY THÊM DÒNG NÀY
+use App\Models\SubmissionFile; // <-- THÊM DÒNG NÀY
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -38,8 +41,52 @@ Route::middleware([
     Route::get('/dashboard', function () {
         $user = auth()->user();
         
-        if ($user->role === 'student') {
-            return Inertia::render('StudentDashboard');
+if ($user->role === 'student') {
+            
+            // 1. LẤY DỮ LIỆU BIỂU ĐỒ
+            $studentTeams = $user->teams()->get(['teams.id', 'teams.name']);
+            $chartLabels = [];
+            $chartData = [];
+
+            foreach ($studentTeams as $team) {
+                $submissions = Submission::where('user_id', $user->id)
+                    ->whereNotNull('grade') // Chỉ lấy bài đã chấm
+                    ->whereHas('post', function ($query) use ($team) {
+                        $query->where('team_id', $team->id);
+                    })
+                    ->with('post:id,max_points')
+                    ->get();
+
+                $totalPoints = $submissions->sum('grade');
+                $totalMaxPoints = $submissions->sum('post.max_points');
+
+                $averagePercent = ($totalMaxPoints > 0) 
+                                    ? ($totalPoints / $totalMaxPoints) * 100 
+                                    : 0;
+
+                $chartLabels[] = $team->name;
+                $chartData[] = round($averagePercent, 2);
+            }
+
+            // 2. ĐỊNH DẠNG DỮ LIỆU
+            $progressChartData = [
+                'labels' => $chartLabels,
+                'datasets' => [
+                    [
+                        'label'           => 'Điểm trung bình (%)',
+                        'backgroundColor' => '#4CAF50', // Màu xanh lá
+                        'data'            => $chartData,
+                        'borderRadius'    => 5,
+                    ]
+                ]
+            ];
+
+            // 3. TRẢ VỀ VIEW VỚI DỮ LIỆU MỚI
+            return Inertia::render('StudentDashboard', [
+                'progressChartData' => $progressChartData,
+                // (Sau này bạn có thể thêm các props khác ở đây)
+                // 'upcomingAssignments' => $upcomingAssignments,
+            ]);
         } elseif ($user->role === 'teacher' || $user->role === 'admin') {
             // Giả sử teacher và admin dùng chung Dashboard
             return Inertia::render('Dashboard');
@@ -51,9 +98,8 @@ Route::middleware([
     })->name('dashboard');
 
     // Route cho học sinh tham gia lớp học (GIỮ NGUYÊN)
-    Route::post('/classrooms/join', [ClassroomController::class, 'join'])
+    Route::post('/classrooms/join', [StudentClassroomController::class, 'join']) // <-- SỬA Ở ĐÂY
         ->name('classrooms.join');
-
 
     // Route để TẠO bài đăng (GIỮ NGUYÊN - SẼ SỬA Ở BƯỚC SAU)
     Route::post('/topics/{topic}/posts', [PostController::class, 'store'])->name('posts.store');
@@ -129,3 +175,18 @@ Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleCom
         ]);
     })->name('teams.show');
 });
+
+// Route cho học sinh nộp bài
+Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
+    ->name('submissions.store');
+
+// Route cho giáo viên xem danh sách bài nộp và chấm điểm
+Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])
+    ->name('submissions.index');
+
+// Route cho giáo viên chấm điểm (cập nhật)
+Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])
+    ->name('submissions.grade');
+// Route mới để giáo viên download file
+Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])
+    ->name('submissions.downloadFile');

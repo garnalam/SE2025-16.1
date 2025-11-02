@@ -1,12 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue'; // <-- Thêm 'computed'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'; // <-- Thêm 'usePage'
+import { ref, computed } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import JoinClassroomModal from '@/Components/JoinClassroomModal.vue'; // <-- Import Modal
 
 defineProps({
     title: String,
@@ -14,19 +15,18 @@ defineProps({
 
 const showingNavigationDropdown = ref(false);
 
-// ===== BẮT ĐẦU THAY ĐỔI =====
-// Lấy thông tin người dùng từ $page props
+// Lấy thông tin người dùng và vai trò từ $page props
 const page = usePage();
 const userRole = computed(() => page.props.auth.user.role);
 const allTeams = computed(() => page.props.auth.user.all_teams || []);
 const currentTeam = computed(() => page.props.auth.user.current_team || null);
 const currentTeamId = computed(() => page.props.auth.user.current_team_id || null);
 
-// Lấy config của Jetstream từ $page props
+// Lấy config của Jetstream
 const hasTeamFeatures = computed(() => page.props.jetstream.hasTeamFeatures);
 const canCreateTeams = computed(() => page.props.jetstream.canCreateTeams);
-// ===== KẾT THÚC THAY ĐỔI =====
 
+// Hàm chuyển Team (Lớp học)
 const switchToTeam = (team) => {
     router.put(route('current-team.update'), {
         team_id: team.id,
@@ -35,13 +35,17 @@ const switchToTeam = (team) => {
     });
 };
 
+// Hàm Đăng xuất
 const logout = () => {
     router.post(route('logout'));
 };
 
-// Hàm mới để điều hướng đến trang tham gia lớp học
-const navigateToJoinClassroom = () => {
-    router.get(route('dashboard')); // Điều hướng về dashboard (nơi có form)
+// Biến trạng thái để điều khiển Modal "Tham gia Lớp"
+const showJoinModal = ref(false);
+
+// Hàm MỞ Modal "Tham gia Lớp"
+const openJoinModal = () => {
+    showJoinModal.value = true;
 };
 </script>
 
@@ -49,7 +53,7 @@ const navigateToJoinClassroom = () => {
     <div>
         <Head :title="title" />
 
-        <Banner />
+        <!-- <Banner /> --> <!-- <-- TÔI ĐÃ VÔ HIỆU HÓA DÒNG NÀY -->
 
         <div class="min-h-screen bg-gray-100">
             <nav class="bg-white border-b border-gray-100">
@@ -71,16 +75,28 @@ const navigateToJoinClassroom = () => {
                                 </NavLink>
                                 
                                 <!-- Link "Lớp học hiện tại" (Feed) -->
-                                <!-- Chỉ hiển thị nếu người dùng đang ở trong 1 lớp học (team) -->
                                 <NavLink v-if="currentTeam" :href="route('teams.feed', currentTeam)" :active="route().current('teams.feed')">
                                     Lớp học hiện tại
                                 </NavLink>
+                                
+                                <!-- Nút "+" Tham gia Lớp (Desktop) -->
+                                <button 
+                                    v-if="userRole === 'student'"
+                                    @click="openJoinModal" 
+                                    type="button" 
+                                    class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    <span class="ml-1">Tham gia Lớp</span>
+                                </button>
                             </div>
                         </div>
 
                         <div class="hidden sm:flex sm:items-center sm:ms-6">
                             
-                            <!-- Teams Dropdown (Đã cập nhật logic) -->
+                            <!-- Teams Dropdown -->
                             <div class="ms-3 relative" v-if="hasTeamFeatures">
                                 <Dropdown align="right" width="60">
                                     <template #trigger>
@@ -99,40 +115,34 @@ const navigateToJoinClassroom = () => {
                                     <template #content>
                                         <div class="w-60">
                                             
-                                            <!-- ===== LOGIC PHÂN QUYỀN CHO GIÁO VIÊN ===== -->
+                                            <!-- Logic Phân Quyền: GIÁO VIÊN -->
                                             <template v-if="userRole === 'teacher' || userRole === 'admin'">
                                                 <div class="block px-4 py-2 text-xs text-gray-400">
                                                     Quản lý Lớp học (GV)
                                                 </div>
 
-                                                <!-- Link Cài đặt Lớp (chỉ hiển thị nếu GV đang ở trong 1 lớp) -->
                                                 <DropdownLink v-if="currentTeam" :href="route('teams.show', currentTeam)">
                                                     Cài đặt Lớp học
                                                 </DropdownLink>
 
-                                                <!-- Link Tạo Lớp học (chỉ GV mới thấy) -->
                                                 <DropdownLink v-if="canCreateTeams" :href="route('teams.create')">
                                                     Tạo Lớp học mới
                                                 </DropdownLink>
                                             </template>
                                             
-                                            <!-- ===== LOGIC PHÂN QUYỀN CHO HỌC SINH ===== -->
+                                            <!-- Logic Phân Quyền: HỌC SINH -->
                                             <template v-if="userRole === 'student'">
                                                 <div class="block px-4 py-2 text-xs text-gray-400">
                                                     Lớp học (HS)
                                                 </div>
 
-                                                <!-- Link Tham gia Lớp học (chỉ HS mới thấy) -->
-                                                <!-- Dùng as="button" và @click để điều hướng -->
-                                                <DropdownLink as="button" @click="navigateToJoinClassroom">
+                                                <!-- Nút này mở Modal -->
+                                                <DropdownLink as="button" @click="openJoinModal">
                                                     Tham gia Lớp học
                                                 </DropdownLink>
                                             </template>
 
-
-                                            <!-- ===== PHẦN CHUNG: CHUYỂN LỚP HỌC ===== -->
-                                            <!-- Hiển thị nếu người dùng (cả GV và HS) thuộc ít nhất 1 lớp -->
-                                            <!-- ===== DÒNG SỬA 1 ===== -->
+                                            <!-- Phân Tách Chung -->
                                             <template v-if="allTeams.length > 0">
                                                 <div class="border-t border-gray-200" />
 
@@ -140,6 +150,7 @@ const navigateToJoinClassroom = () => {
                                                     Chuyển Lớp học
                                                 </div>
 
+                                                <!-- Danh sách "Chuyển Lớp học" -->
                                                 <template v-for="team in allTeams" :key="team.id">
                                                     <form @submit.prevent="switchToTeam(team)">
                                                         <DropdownLink as="button">
@@ -147,7 +158,6 @@ const navigateToJoinClassroom = () => {
                                                                 <svg v-if="team.id == currentTeamId" class="me-2 size-5 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                 </svg>
-
                                                                 <div>{{ team.name }}</div>
                                                             </div>
                                                         </DropdownLink>
@@ -159,7 +169,7 @@ const navigateToJoinClassroom = () => {
                                 </Dropdown>
                             </div>
                             
-                            <!-- Settings Dropdown (Giữ nguyên) -->
+                            <!-- Settings Dropdown -->
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
@@ -205,7 +215,7 @@ const navigateToJoinClassroom = () => {
                             </div>
                         </div>
 
-                        <!-- Hamburger (Giữ nguyên) -->
+                        <!-- Hamburger -->
                         <div class="-me-2 flex items-center sm:hidden">
                             <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
                                 <svg class="size-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -224,13 +234,21 @@ const navigateToJoinClassroom = () => {
                             Dashboard
                         </ResponsiveNavLink>
                         
-                        <!-- Link "Lớp học hiện tại" (Feed) cho mobile -->
                         <ResponsiveNavLink v-if="currentTeam" :href="route('teams.feed', currentTeam)" :active="route().current('teams.feed')">
                             Lớp học hiện tại
                         </ResponsiveNavLink>
+
+                        <!-- Nút Tham gia Lớp (Mobile) -->
+                        <ResponsiveNavLink 
+                            v-if="userRole === 'student'"
+                            as="button"
+                            @click="openJoinModal"
+                        >
+                            Tham gia Lớp học mới
+                        </ResponsiveNavLink>
                     </div>
 
-                    <!-- Responsive Settings Options (Giữ nguyên) -->
+                    <!-- Responsive Settings Options -->
                     <div class="pt-4 pb-1 border-t border-gray-200">
                         <div class="flex items-center px-4">
                             <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 me-3">
@@ -263,7 +281,7 @@ const navigateToJoinClassroom = () => {
                                 </ResponsiveNavLink>
                             </form>
 
-                            <!-- ===== PHÂN QUYỀN TRÊN MENU MOBILE ===== -->
+                            <!-- Phân Quyền trên Menu Mobile -->
                             <div class="border-t border-gray-200 mt-2 pt-2">
                                 <!-- GIÁO VIÊN (Teacher) -->
                                 <template v-if="userRole === 'teacher' || userRole === 'admin'">
@@ -283,13 +301,12 @@ const navigateToJoinClassroom = () => {
                                     <div class="block px-4 py-2 text-xs text-gray-400">
                                         Lớp học (HS)
                                     </div>
-                                    <ResponsiveNavLink as="button" @click="navigateToJoinClassroom">
+                                    <ResponsiveNavLink as="button" @click="openJoinModal">
                                         Tham gia Lớp học
                                     </ResponsiveNavLink>
                                 </template>
 
                                 <!-- CHUNG: Chuyển Lớp học -->
-                                <!-- ===== DÒNG SỬA 2 ===== -->
                                 <template v-if="allTeams.length > 0">
                                     <div class="border-t border-gray-200 mt-2 pt-2" />
                                     <div class="block px-4 py-2 text-xs text-gray-400">
@@ -309,7 +326,6 @@ const navigateToJoinClassroom = () => {
                                     </template>
                                 </template>
                             </div>
-                            <!-- ===== KẾT THÚC PHÂN QUYỀN MOBILE ===== -->
                         </div>
                     </div>
                 </div>
@@ -326,6 +342,12 @@ const navigateToJoinClassroom = () => {
             <main>
                 <slot />
             </main>
+
+            <!-- Component Modal "Tham gia Lớp" -->
+            <JoinClassroomModal 
+                :show="showJoinModal" 
+                @close="showJoinModal = false" 
+            />
         </div>
     </div>
 </template>

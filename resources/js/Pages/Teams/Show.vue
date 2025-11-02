@@ -12,8 +12,6 @@ import UpdateTeamNameForm from '@/Pages/Teams/Partials/UpdateTeamNameForm.vue';
 
 import FormSection from '@/Components/FormSection.vue'; // <-- THÊM MỚI
 
-
-
 // Gán props để có thể dùng trong hàm copyToClipboard
 
 const props = defineProps({ // <-- CHỈNH SỬA DÒNG NÀY
@@ -102,7 +100,7 @@ const copyToClipboard = () => { // <-- THÊM MỚI
 
 
 
-                            <div classid="join-code-display" 
+                            <div id="join-code-display" 
 
                                  class="mt-4 p-3 bg-gray-100 rounded-md font-mono text-2xl text-gray-700 tracking-widest">
 
