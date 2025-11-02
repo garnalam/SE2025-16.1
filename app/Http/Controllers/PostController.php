@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\Post;
 use App\Models\Attachment;
@@ -16,6 +17,7 @@ class PostController extends Controller
 {
     /**
      * Lưu một bài đăng mới (Text, Poll, Material, Assignment) vào chủ đề.
+     * (Hàm 'store' của bạn, giữ nguyên)
      */
     public function store(Request $request, Topic $topic)
     {
@@ -27,14 +29,13 @@ class PostController extends Controller
         }
 
         // 2. Phân quyền vai trò: Chỉ giáo viên (admin/editor) mới được đăng bài tập/tài liệu
+        // (SỬA LẠI: Dùng $user->role theo logic của bạn)
         if (in_array($request->input('post_type'), ['assignment', 'material'])) {
-            if (! $request->user()->hasTeamRole($team, 'admin') && ! $request->user()->hasTeamRole($team, 'editor')) {
+            if ($request->user()->role !== 'teacher') {
                  abort(403, 'Chỉ giáo viên mới có thể đăng bài tập hoặc tài liệu.');
             }
         }
-
         
-
         // --- TẠO LOGIC VALIDATION CHO FILE (LINH HOẠT HƠN) ---
         $filesRules = ['nullable', 'array'];
         if ($request->input('post_type') === 'material') {
@@ -44,7 +45,7 @@ class PostController extends Controller
         }
         // ---------------------------------------------------
 
-        // 3. Validate dữ liệu (ĐÃ SỬA LỖI VALIDATION)
+        // 3. Validate dữ liệu
         try {
             $validated = $request->validate([
                 'post_type' => ['required', Rule::in(['text', 'poll', 'material', 'assignment'])],
@@ -62,7 +63,7 @@ class PostController extends Controller
                 
                 'files.*' => [
                     'file',
-                    'max:20480'
+                    'max:20480' // 20MB max
                 ], 
 
                 // --- Validation cho Poll (Giữ nguyên) ---
@@ -80,12 +81,7 @@ class PostController extends Controller
                 'max_points' => ['nullable', 'integer', 'min:0'],
             ]);
         } catch (ValidationException $e) {
-            // --- DEBUG (Tạm thời vô hiệu hóa) ---
-            // dd($e->errors()); 
-            // Nếu vẫn lỗi, chúng ta có thể bật lại, nhưng giờ hãy để nó chạy
-            // Ném lại lỗi để Inertia xử lý
             throw $e; 
-            // -------------
         }
         
         // 4. Sử dụng Transaction để tạo Post và các dữ liệu liên quan
@@ -150,7 +146,8 @@ class PostController extends Controller
         $team = $post->team;
         $user = $request->user();
 
-        if ($user->id !== $post->user_id && !$user->hasTeamRole($team, 'admin') && !$user->DhasTeamRole($team, 'editor')) {
+        // (SỬA LẠI: Dùng $user->role theo logic của bạn)
+        if ($user->id !== $post->user_id && $user->role !== 'teacher') {
             abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
 
@@ -159,6 +156,60 @@ class PostController extends Controller
         ]);
 
         return back(303);
+    }
+
+    // ===== HÀM MỚI ĐỂ SỬA BÀI ĐĂNG =====
+    /**
+     * Cập nhật một bài đăng đã có.
+     */
+    public function update(Request $request, Post $post)
+    {
+        // 1. Kiểm tra quyền (Dùng PostPolicy.php)
+        Gate::authorize('update', $post);
+
+        // 2. Validate (Chỉ cho sửa title và content)
+        $validated = $request->validate([
+            'title' => [
+                'required_if:post_type,assignment', // Chỉ bắt buộc nếu là bài tập
+                'nullable',
+                'string',
+                'max:255'
+            ],
+            'content' => [
+                'required',
+                'string',
+                'max:5000'
+            ],
+        ]);
+
+        // 3. Cập nhật bài đăng
+        $post->update($validated);
+
+        // 4. Chuyển hướng
+        return redirect()->back()->with('status', 'Đã cập nhật bài đăng thành công.');
+    }
+
+
+    // ===== HÀM MỚI ĐỂ XÓA BÀI ĐĂNG =====
+    /**
+     * Xóa một bài đăng cụ thể.
+     */
+    public function destroy(Request $request, Post $post)
+    {
+        // 1. Kiểm tra quyền (Dùng PostPolicy.php)
+        Gate::authorize('delete', $post);
+
+        // 2. (Tùy chọn): Xóa các file đính kèm trên Storage
+        // foreach ($post->attachments as $attachment) {
+        //     Storage::disk('public')->delete($attachment->path);
+        // }
+        // (Lưu ý: DB::transaction sẽ tự xóa attachments trong CSDL)
+
+        // 3. Xóa bài đăng (và các attachments/comments liên quan)
+        $post->delete();
+
+        // 4. Chuyển hướng
+        return redirect()->back()->with('status', 'Đã xóa bài đăng thành công.');
     }
 }
 
