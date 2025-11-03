@@ -1,7 +1,6 @@
 <script setup>
 
-import { ref } from 'vue';
-
+import { ref, computed } from 'vue'; // THAY ĐỔI: Thêm computed
 import { useForm, Link } from '@inertiajs/vue3';
 
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -28,7 +27,18 @@ const props = defineProps({
 
 });
 
+// THÊM MỚI: Computed property để kiểm tra nộp muộn
+const isLate = computed(() => {
+    // Nếu không có bài nộp hoặc không có hạn chót, thì không muộn
+    if (!props.userSubmission || !props.post.due_date) {
+        return false;
+    }
 
+    const submissionTime = new Date(props.userSubmission.submitted_at);
+    const dueDate = new Date(props.post.due_date);
+
+    return submissionTime > dueDate;
+});
 
 // Form nộp bài
 
@@ -139,38 +149,21 @@ const submitAssignment = () => {
         <div v-if="post.content" class="mt-4 prose max-w-none" v-html="post.content"></div>
 
         
-
                 <div v-if="post.attachments && post.attachments.length > 0" class="mt-4">
-
             <strong class="text-sm font-medium text-gray-700">File bài tập đính kèm:</strong>
-
             <ul class="list-disc list-inside pl-2 mt-2 space-y-1">
-
                 <li v-for="file in post.attachments" :key="file.id" class="text-sm">
-
                     <a 
-
                         :href="'/storage/' + file.path" 
-
                         target="_blank" 
-
                         class="text-blue-600 hover:underline hover:text-blue-800"
-
                     >
-
                         {{ file.original_name }}
-
                     </a>
-
                 </li>
-
             </ul>
-
         </div>
-
                 <hr class="my-5">
-
-
 
         <div v-if="props.canManageTopics">
 
@@ -197,13 +190,23 @@ const submitAssignment = () => {
             <h4 class="text-md font-semibold text-gray-800">Bài nộp của bạn</h4>
 
             
+            <!-- THAY ĐỔI: Khối hiển thị bài nộp, thêm logic isLate -->
+            <div v-if="userSubmission" class="p-3 my-3 border rounded-md" :class="{
+                'bg-green-50 border-green-200': !isLate,
+                'bg-red-50 border-red-200': isLate
+            }">
+                <p class="font-semibold" :class="{ 'text-green-800': !isLate, 'text-red-800': isLate }">
+                    <span v-if="isLate">
+                        ❌ Nộp muộn lúc: {{ new Date(userSubmission.submitted_at).toLocaleString('vi-VN') }}
+                    </span>
+                    <span v-else>
+                        ✔️ Đã nộp lúc: {{ new Date(userSubmission.submitted_at).toLocaleString('vi-VN') }}
+                    </span>
+                </p>
 
-            <div v-if="userSubmission" class="p-3 my-3 bg-green-50 border border-green-200 rounded-md">
-
-                <p class="font-semibold text-green-800">
-
-                    ✔️ Đã nộp lúc: {{ new Date(userSubmission.submitted_at).toLocaleString('vi-VN') }}
-
+                <!-- THÊM MỚI: Hiển thị thông báo nộp muộn so với hạn -->
+                <p v-if="isLate" class="text-sm text-red-700 mt-1">
+                    (Đã nộp sau hạn chót: {{ new Date(post.due_date).toLocaleString('vi-VN') }})
                 </p>
 
                 
@@ -218,10 +221,7 @@ const submitAssignment = () => {
 
                 </ul>
 
-
-
-                <div v-if="userSubmission.grade !== null" class="mt-3 pt-3 border-t border-green-200">
-
+                <div v-if="userSubmission.grade !== null" class="mt-3 pt-3" :class="{ 'border-t border-green-200': !isLate, 'border-t border-red-200': isLate }">
                     <p class="text-lg font-bold text-blue-800">
 
                         Điểm số: {{ userSubmission.grade }} / {{ post.max_points }}
@@ -239,6 +239,8 @@ const submitAssignment = () => {
                 </div>
 
             </div>
+            <!-- KẾT THÚC THAY ĐỔI -->
+
 
 
 
@@ -257,11 +259,8 @@ const submitAssignment = () => {
                             v-model="form.content"
 
                             class="mt-1 block w-full"
-
-                          rows="3"
-
+                            rows="3"
                              placeholder="Nhập câu trả lời của bạn tại đây..."
-
                         />
 
                         <InputError :message="form.errors.content" class="mt-2" />
@@ -343,5 +342,4 @@ const submitAssignment = () => {
         </div>
 
     </div>
-
 </template>
