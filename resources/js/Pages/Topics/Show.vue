@@ -1,44 +1,34 @@
 <script setup>
+import { ref, computed } from 'vue'; // <-- THÊM ref
+import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SectionBorder from '@/Components/SectionBorder.vue';
 import CreatePostForm from '@/Pages/Teams/Partials/CreatePostForm.vue';
-import { Link, useForm } from '@inertiajs/vue3'; 
-import { computed } from 'vue'; 
 import PollDisplay from '@/Pages/Topics/Partials/PollDisplay.vue';
 import CommentSection from '@/Pages/Topics/Partials/CommentSection.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-
-// --- THÊM DÒNG IMPORT NÀY ---
-import AssignmentView from '@/Pages/Teams/Partials/AssignmentView.vue'; 
+import AssignmentView from '@/Pages/Teams/Partials/AssignmentView.vue';
+import Dropdown from '@/Components/Dropdown.vue'; // <-- THÊM
+import DropdownLink from '@/Components/DropdownLink.vue'; // <-- THÊM
+import EditPostModal from '@/Pages/Topics/Partials/EditPostModal.vue'; // <-- THÊM MODAL SỬA
 
 const props = defineProps({
     team: Object,
     topic: Object,
-    posts: Array,
+    posts: Array, // posts bây giờ đã có 'can' và 'created_at_formatted'
     permissions: Object,
     authUserId: Number, 
-    userSubmissions: Object, // <-- THÊM PROP NÀY
+    userSubmissions: Object,
 });
 
-// TÍNH TOÁN CÁC BIẾN MỚI
+// (Logic 'showCreatePostForm' và 'toggleLock' của bạn giữ nguyên)
 const canManageTopics = computed(() => props.permissions.canManageTopics);
 const canCreatePosts = computed(() => props.permissions.canCreatePosts);
-
-// Ẩn form nếu: (chủ đề bị khóa VÀ user không phải là GV)
 const showCreatePostForm = computed(() => {
-    // Nếu topic bị khóa VÀ user không phải là người quản lý (GV)
-    if (props.topic.is_locked && !canManageTopics.value) {
-        return false;
-    }
-    // Hoặc nếu user không có quyền đăng bài (không phải thành viên)
-    if (!canCreatePosts.value) {
-        return false;
-    }
-    // Mọi trường hợp khác (GV, hoặc topic không khóa) -> hiển thị
+    if (props.topic.is_locked && !canManageTopics.value) return false;
+    if (!canCreatePosts.value) return false;
     return true;
 });
-
-// Form để gọi route 'toggleLock'
 const lockForm = useForm({});
 const toggleLock = () => {
     lockForm.patch(route('topics.toggleLock', props.topic), {
@@ -46,23 +36,35 @@ const toggleLock = () => {
     });
 };
 
-// HÀM FORMAT NGÀY
-const formatMyDate = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes} ${day}/${month}/${year}`;
+// --- LOGIC MỚI CHO SỬA/XÓA ---
+
+// Biến trạng thái để mở modal sửa
+const editingPost = ref(null);
+
+const openEditModal = (post) => {
+    editingPost.value = post;
+};
+
+const closeEditModal = () => {
+    editingPost.value = null;
+};
+
+// Form và hàm Xóa (Đã có)
+const deleteForm = useForm({});
+const confirmDeletePost = (postId) => {
+    if (confirm('Bạn có chắc chắn muốn xóa bài đăng này không?')) {
+        deleteForm.delete(route('posts.destroy', postId), {
+            preserveScroll: true,
+        });
+    }
 };
 </script>
 
 <template>
     <AppLayout :title="topic.name">
         <template #header>
-            <div class="flex justify-between items-center">
+            <!-- (Header của bạn giữ nguyên) -->
+             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     <Link :href="route('teams.feed', team)" class="text-indigo-600 hover:text-indigo-800">
                         {{ team.name }}
@@ -71,7 +73,6 @@ const formatMyDate = (isoString) => {
                     {{ topic.name }}
                     <span v-if="topic.is_locked" title="Chủ đề này đã bị khóa" class="ml-2">🔒</span>
                 </h2>
-                
                 <div v-if="canManageTopics">
                     <SecondaryButton @click="toggleLock" :class="{ 'opacity-25': lockForm.processing }" :disabled="lockForm.processing">
                         {{ topic.is_locked ? '🔓 Mở khóa Chủ đề' : '🔒 Khóa Chủ đề' }}
@@ -83,6 +84,7 @@ const formatMyDate = (isoString) => {
         <div>
             <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
                 
+                <!-- (Form Tạo Bài Đăng của bạn giữ nguyên) -->
                 <div v-if="showCreatePostForm">
                     <CreatePostForm 
                         :team="team" 
@@ -102,34 +104,61 @@ const formatMyDate = (isoString) => {
                     <h3 class="text-lg font-medium text-gray-900">
                         Bài đăng trong chủ đề
                     </h3>
-                    <p v-if="topic.description" class="text-sm text-gray-600 mb-4">{{ topic.description }}</p>
-
+                    
                     <div class="mt-4 space-y-4">
-    
                         <div v-if="posts.length > 0" class="space-y-4">
                             
-                            <div v-for="post in posts" :key="post.id">
-                                
-                                <AssignmentView
-                                    v-if="post.post_type === 'assignment'"
-                                    :post="post"
-                                    :can-manage-topics="canManageTopics"
-                                    :user-submission="userSubmissions[post.id]"
-                                />
-
-                                <div v-else class="bg-white shadow-sm rounded-lg p-4">
+                            <!-- ===== BẮT ĐẦU CẤU TRÚC LẠI ===== -->
+                            <!-- Lặp qua các bài đăng -->
+                            <div v-for="post in posts" :key="post.id" class="bg-white shadow-sm rounded-lg">
+                                <div class="p-4 sm:p-6">
                                     
-                                    <div class="flex items-center mb-3">
-                                        <img class="h-8 w-8 rounded-full object-cover" :src="post.user.profile_photo_url" :alt="post.user.name">
-                                        <div class="ml-3">
-                                            <div class="font-medium text-gray-900">{{ post.user.name }}</div>
-                                            <div class="text-sm text-gray-500">{{ formatMyDate(post.created_at) }}</div>
+                                    <!-- (1) HEADER CHUNG (USER + NÚT 3 CHẤM) -->
+                                    <div class="flex justify-between items-start mb-3">
+                                        <!-- Thông tin người đăng -->
+                                        <div class="flex items-center">
+                                            <img class="h-8 w-8 rounded-full object-cover" :src="post.user.profile_photo_url" :alt="post.user.name">
+                                            <div class="ml-3">
+                                                <div class="font-medium text-gray-900">{{ post.user.name }}</div>
+                                                <!-- Dùng 'created_at_formatted' từ Controller -->
+                                                <div class="text-sm text-gray-500">{{ post.created_at_formatted }}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Nút 3 chấm (Sửa/Xóa) -->
+                                        <!-- Sửa lỗi: Đảm bảo post.can tồn tại trước khi truy cập -->
+                                        <div v-if="post.can && (post.can.update || post.can.delete)" class="relative">
+                                            <Dropdown align="right" width="48">
+                                                <template #trigger>
+                                                    <button class="p-2 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+                                                        </svg>
+                                                    </button>
+                                                </template>
+                                                <template #content>
+                                                    <DropdownLink as="button" v-if="post.can.update" @click="openEditModal(post)">
+                                                        Sửa bài đăng
+                                                    </DropdownLink>
+                                                    <DropdownLink as="button" v-if="post.can.delete" @click="confirmDeletePost(post.id)" class="text-red-600 hover:bg-red-50">
+                                                        Xóa bài đăng
+                                                    </DropdownLink>
+                                                </template>
+                                            </Dropdown>
                                         </div>
                                     </div>
 
+                                    <!-- (2) NỘI DUNG CHUYÊN BIỆT (v-if/v-else) -->
                                     <div class="content-container space-y-2">
                                         
-                                        <p v-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
+                                        <AssignmentView
+                                            v-if="post.post_type === 'assignment'"
+                                            :post="post"
+                                            :can-manage-topics="canManageTopics"
+                                            :user-submission="userSubmissions[post.id]"
+                                        />
+
+                                        <p v-else-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
                                             {{ post.content }}
                                         </p>
 
@@ -157,9 +186,9 @@ const formatMyDate = (isoString) => {
                                                 </ul>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        </div>
-
+                                    <!-- (3) FOOTER CHUNG (BÌNH LUẬN) -->
                                     <CommentSection
                                         :post="post"
                                         :topic="topic"
@@ -167,9 +196,9 @@ const formatMyDate = (isoString) => {
                                     />
                                 </div>
                             </div>
-
-                            </div>
-                    
+                            <!-- ===== KẾT THÚC CẤU TRÚC LẠI ===== -->
+                        </div>
+                        
                         <div v-else class="text-center text-gray-500 py-6">
                             Chưa có bài đăng nào trong chủ đề này.
                             <span v-if="showCreatePostForm">Hãy là người đầu tiên!</span>
@@ -179,5 +208,15 @@ const formatMyDate = (isoString) => {
 
             </div>
         </div>
+
+        <!-- MODAL SỬA BÀI ĐĂNG (MỚI) -->
+        <!-- Đảm bảo `editingPost` không null trước khi truyền -->
+        <EditPostModal
+            :show="editingPost !== null"
+            :post="editingPost"
+            @close="closeEditModal"
+        />
+
     </AppLayout>
 </template>
+

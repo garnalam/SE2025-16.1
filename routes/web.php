@@ -1,20 +1,24 @@
 <?php
-
+use App\Http\Controllers\PostController;
+use App\Models\Submission;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\PostController;
+// use App\Http\Controllers\PostController; // <-- Đã di chuyển khỏi đây
 use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Jetstream\Jetstream;
 use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\StudentClassroomController; 
 use App\Http\Controllers\TopicController;
-use App\Models\Topic; // <-- ĐÃ THÊM DÒNG NÀY
 use App\Http\Controllers\PollVoteController;
 use App\Http\Controllers\CommentController;
-use App\Http\Controllers\SubmissionController; // <-- HÃY THÊM DÒNG NÀY
-use App\Models\SubmissionFile; // <-- THÊM DÒNG NÀY
+use App\Http\Controllers\SubmissionController; 
+use App\Models\Topic; 
+use App\Models\Post;
+use Illuminate\Support\Facades\Auth; // <-- Đã di chuyển lên đây
+use Carbon\Carbon; // <-- Đã di chuyển lên đây
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -36,74 +40,133 @@ Route::middleware([
     'verified',
 ])->group(function () {
     
-    // ===== LOGIC DASHBOARD CỦA BẠN (GIỮ NGUYÊN) =====
+    // ===== LOGIC DASHBOARD =====
     Route::get('/dashboard', function () {
-        $user = auth()->user();
+        $user = Auth::user(); // Dùng Auth::user()
         
         if ($user->role === 'student') {
-            return Inertia::render('StudentDashboard');
+            
+            // Lấy ID các lớp học
+            $teamIds = $user->teams()->pluck('teams.id');
+
+            // 1. LẤY DỮ LIỆU BIỂU ĐỒ
+            $studentTeams = $user->teams()->get(['teams.id', 'teams.name']);
+            $chartLabels = [];
+            $chartData = [];
+            foreach ($studentTeams as $team) {
+                $submissions = Submission::where('user_id', $user->id)
+                    ->whereNotNull('grade')
+                    ->whereHas('post', function ($query) use ($team) {
+                        $query->where('team_id', $team->id);
+                    })
+                    ->with('post:id,max_points')
+                    ->get();
+                $totalPoints = $submissions->sum('grade');
+                $totalMaxPoints = $submissions->sum('post.max_points');
+                $averagePercent = ($totalMaxPoints > 0) 
+                                    ? ($totalPoints / $totalMaxPoints) * 100 
+                                    : 0;
+                $chartLabels[] = $team->name;
+                $chartData[] = round($averagePercent, 2);
+            }
+            $progressChartData = [
+                'labels' => $chartLabels,
+                'datasets' => [
+                    [
+                        'label'           => 'Điểm trung bình (%)',
+                        'backgroundColor' => '#4CAF50',
+                        'data'            => $chartData,
+                        'borderRadius'    => 5,
+                    ]
+                ]
+            ];
+
+            // 2. Lấy Bài tập sắp đến hạn (Dùng Carbon)
+            
+            // ===== ĐÃ DỌN DẸP DEBUG =====
+            $upcomingAssignments = Post::where('post_type', 'assignment')
+                ->whereIn('team_id', $teamIds)
+                ->where('due_date', '>=', Carbon::now()) // <-- Đã kích hoạt lại
+                ->where('due_date', '<=', Carbon::now()->addDays(7)) // <-- Đã kích hoạt lại
+                ->whereDoesntHave('submissions', function ($query) use ($user) {
+                    $query->where('user_id', $user->id); // Chỉ lấy bài chưa nộp
+                })
+                ->with('team:id,name')
+                ->orderBy('due_date', 'asc')
+                ->limit(5)
+                ->get();
+            // ===== KẾT THÚC DỌN DẸP =====
+
+
+            // 3. Lấy Thông báo mới nhất (từ các topic bị khóa)
+            $latestAnnouncements = Post::whereIn('team_id', $teamIds)
+                ->whereHas('topic', function ($query) {
+                    $query->where('is_locked', true);
+                })
+                ->with('team:id,name')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            // 4. TRẢ VỀ VIEW VỚI DỮ LIỆU MỚI
+            return Inertia::render('StudentDashboard', [
+                'progressChartData'   => $progressChartData,
+                'upcomingAssignments' => $upcomingAssignments,
+                'latestAnnouncements' => $latestAnnouncements,
+            ]);
+
         } elseif ($user->role === 'teacher' || $user->role === 'admin') {
-            // Giả sử teacher và admin dùng chung Dashboard
             return Inertia::render('Dashboard');
         }
         
-        // Mặc định (ví dụ: cho vai trò không xác định)
         return Inertia::render('Dashboard');
 
     })->name('dashboard');
 
-    // Route cho học sinh tham gia lớp học (GIỮ NGUYÊN)
-    Route::post('/classrooms/join', [ClassroomController::class, 'join'])
+    // Route cho học sinh tham gia lớp học
+    Route::post('/classrooms/join', [StudentClassroomController::class, 'join'])
         ->name('classrooms.join');
 
 
-    // Route để TẠO bài đăng (GIỮ NGUYÊN - SẼ SỬA Ở BƯỚC SAU)
+    // ===== ROUTES BÀI ĐĂNG (POSTS) =====
+    // Tạo bài đăng
     Route::post('/topics/{topic}/posts', [PostController::class, 'store'])->name('posts.store');
+    // Bật/tắt bình luận
+    Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleComments'])->name('posts.toggleComments');
+    
+    // --- THÊM CÁC ROUTE MỚI CHO SỬA/XÓA ---
+    // Sửa bài đăng (Modal gọi)
+    Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
+    // Xóa bài đăng (Nút 3 chấm gọi)
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+    // -------------------------------------
+
     
     // ===== ROUTES QUẢN LÝ CHỦ ĐỀ (TOPIC) =====
     Route::post('/teams/{team}/topics', [TopicController::class, 'store'])->name('topics.store');
-    
-    // Cập nhật chủ đề (sẽ dùng ở bước sau)
     Route::put('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
-
-    // Xóa chủ đề
     Route::delete('/topics/{topic}', [TopicController::class, 'destroy'])->name('topics.destroy');
-
-    // (QUAN TRỌNG) Route để xem các bài đăng BÊN TRONG chủ đề
     Route::get('/topics/{topic}', [TopicController::class, 'show'])->name('topics.show');
-
     Route::patch('/topics/{topic}/lock', [TopicController::class, 'toggleLock'])->name('topics.toggleLock');
-
     Route::post('/poll-votes/{pollOption}', [PollVoteController::class, 'store'])->name('poll-votes.store');
 
-    // ===== ROUTES BÌNH LUẬN (MỚI) =====
-// Tạo một bình luận mới (cho 1 bài đăng)
-Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
-
-// ===== ROUTE CẬP NHẬT BÀI ĐĂNG (MỚI) =====
-// Tắt/Mở bình luận cho 1 bài đăng
-Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleComments'])->name('posts.toggleComments');
-    // ===== KẾT THÚC ROUTES TOPIC =====
+    // ===== ROUTES BÌNH LUẬN (COMMENTS) =====
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
 
 
     // ===== ROUTE TRANG FEED (ĐÃ SỬA) =====
-    // Trang này giờ sẽ hiển thị DANH SÁCH CHỦ ĐỀ (TOPICS)
     Route::get('/teams/{team}/feed', function (Team $team) {
         if (Gate::denies('view', $team)) {
             abort(403);
         }
         
-        // Tải danh sách chủ đề (topics) thay vì bài đăng (posts)
-        $team->load('topics.user'); // Eager load topics và người tạo
+        $team->load('topics.user'); 
 
         return Inertia::render('Teams/Feed', [
             'team' => $team,
-            'topics' => $team->topics, // <-- Truyền "topics"
+            'topics' => $team->topics,
             'permissions' => [
-                // Giữ permission cũ
                 'canAddTeamMembers' => Gate::check('addTeamMember', $team),
-                
-                // Thêm permission mới để kiểm tra ai được tạo chủ đề
                 'canCreateTopics' => Gate::check('create', [Topic::class, $team]),
             ],
         ]);
@@ -111,7 +174,7 @@ Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleCom
 
 
     // ===== ROUTE CÀI ĐẶT LỚP HỌC (GIỮ NGUYÊN) =====
-    Route::get('/teams/{team}', function (Team $team) { // <-- Thay đổi ở đây
+    Route::get('/teams/{team}', function (Team $team) {
         if (Gate::denies('view', $team)) {
             abort(403);
         }
@@ -132,17 +195,19 @@ Route::patch('/posts/{post}/toggle-comments', [PostController::class, 'toggleCom
     })->name('teams.show');
 });
 
-// Route cho học sinh nộp bài
-Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
-    ->name('submissions.store');
+// ===== ROUTES NỘP BÀI (SUBMISSIONS) =====
+// (Nằm ngoài group 'verified' để có thể truy cập, nhưng vẫn cần 'auth')
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
+        ->name('submissions.store');
 
-// Route cho giáo viên xem danh sách bài nộp và chấm điểm
-Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])
-    ->name('submissions.index');
+    Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])
+        ->name('submissions.index');
 
-// Route cho giáo viên chấm điểm (cập nhật)
-Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])
-    ->name('submissions.grade');
-// Route mới để giáo viên download file
-Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])
-    ->name('submissions.downloadFile');
+    Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])
+        ->name('submissions.grade');
+        
+    Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])
+        ->name('submissions.downloadFile');
+});
+

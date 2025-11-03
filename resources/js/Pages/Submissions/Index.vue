@@ -24,6 +24,18 @@ const form = useForm({
     feedback: '',
 });
 
+// THÊM MỚI: Hàm kiểm tra nộp muộn
+const isSubmissionLate = (submission) => {
+    // Nếu không có bài nộp hoặc không có hạn chót, thì không muộn
+    if (!submission || !props.post.due_date) {
+        return false;
+    }
+    const submissionTime = new Date(submission.submitted_at);
+    const dueDate = new Date(props.post.due_date);
+    return submissionTime > dueDate;
+};
+
+
 // Hàm mở Modal
 const openGradeModal = (submissionData) => {
     selectedSubmissionData.value = submissionData;
@@ -91,6 +103,12 @@ const getFileUrl = (filePath) => {
                     <div class="mb-4">
                         <h3 class="text-lg font-medium">Tổng quan</h3>
                         <p class="text-sm text-gray-600">Điểm tối đa: <span class="font-bold">{{ post.max_points }}</span></p>
+                        <!-- THÊM MỚI: Hiển thị hạn nộp ở đây cho rõ -->
+                        <p class="text-sm text-gray-600">
+                            Hết hạn: 
+                            <span v-if="post.due_date" class="font-bold text-red-600">{{ new Date(post.due_date).toLocaleString('vi-VN') }}</span>
+                            <span v-else class="font-bold">Không có</span>
+                        </p>
                     </div>
 
                     <div class="overflow-x-auto border rounded-lg">
@@ -124,19 +142,32 @@ const getFileUrl = (filePath) => {
                                             {{ data.status === 'Not Submitted' ? 'Chưa nộp' : (data.status === 'Submitted' ? 'Đã nộp' : 'Đã chấm') }}
                                         </span>
                                     </td>
+                                    
+                                    <!-- THAY ĐỔI: Cột thời gian nộp, bổ sung logic kiểm tra nộp muộn -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ data.submission ? new Date(data.submission.submitted_at).toLocaleString('vi-VN') : 'N/A' }}
+                                        <div v-if="data.submission">
+                                            <span>{{ new Date(data.submission.submitted_at).toLocaleString('vi-VN') }}</span>
+                                            
+                                            <!-- THÊM MỚI: Tag "Nộp muộn" -->
+                                            <span v-if="isSubmissionLate(data.submission)" 
+                                                  class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                Nộp muộn
+                                            </span>
+                                        </div>
+                                        <span v-else>N/A</span>
                                     </td>
+                                    <!-- KẾT THÚC THAY ĐỔI -->
+                                    
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-    <span v-if="data.status === 'Graded'">
-        {{ data.submission.grade }} / {{ post.max_points }}
-    </span>
-    <span v-else>Chưa chấm</span>
-</td>
+                                        <span v-if="data.status === 'Graded'">
+                                            {{ data.submission.grade }} / {{ post.max_points }}
+                                        </span>
+                                        <span v-else>Chưa chấm</span>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <PrimaryButton @click="openGradeModal(data)" :disabled="!data.submission">
-    {{ data.status === 'Graded' ? 'Sửa điểm' : 'Chấm bài' }}
-</PrimaryButton>
+                                            {{ data.status === 'Graded' ? 'Sửa điểm' : 'Chấm bài' }}
+                                        </PrimaryButton>
                                     </td>
                                 </tr>
                             </tbody>
@@ -148,9 +179,19 @@ const getFileUrl = (filePath) => {
 
         <Modal :show="showGradeModal" @close="closeModal">
             <form @submit.prevent="submitGrade" class="p-6">
-                <h2 class="text-lg font-medium text-gray-900">
-                    Chấm bài cho: {{ selectedSubmissionData?.student.name }}
-                </h2>
+
+                <!-- THAY ĐỔI: Bổ sung tag nộp muộn trong tiêu đề Modal -->
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-medium text-gray-900">
+                        Chấm bài cho: {{ selectedSubmissionData?.student.name }}
+                    </h2>
+                    <span v-if="selectedSubmissionData?.submission && isSubmissionLate(selectedSubmissionData.submission)"
+                          class="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                        NỘP MUỘN
+                    </span>
+                </div>
+                <!-- KẾT THÚC THAY ĐỔI -->
+
 
                 <div class="mt-4 space-y-3">
                     <div>
@@ -163,14 +204,14 @@ const getFileUrl = (filePath) => {
                     <div>
                         <InputLabel value="Files học sinh nộp:" />
                         <ul v-if="selectedSubmissionData?.submission?.files.length > 0" class="list-disc list-inside mt-1 space-y-1">
-    <li v-for="file in selectedSubmissionData.submission.files" :key="file.id">
-        <a 
-            :href="route('submissions.downloadFile', file.id)" class="text-indigo-600 hover:underline" 
-            target="_blank" >
-            {{ file.original_name }}
-        </a>
-    </li>
-</ul>
+                            <li v-for="file in selectedSubmissionData.submission.files" :key="file.id">
+                                <a 
+                                    :href="route('submissions.downloadFile', file.id)" class="text-indigo-600 hover:underline" 
+                                    target="_blank" >
+                                    {{ file.original_name }}
+                                </a>
+                            </li>
+                        </ul>
                         <p v-else class="text-sm text-gray-500">(Không có file đính kèm)</p>
                     </div>
                 </div>
