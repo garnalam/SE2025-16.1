@@ -1,7 +1,9 @@
 <?php
+use App\Http\Controllers\Teacher\AnalyticsController;
 use App\Http\Controllers\PostController;
 use App\Models\Submission;
 use Illuminate\Foundation\Application;
+use App\Http\Controllers\Teacher\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 // use App\Http\Controllers\PostController; // <-- Đã di chuyển khỏi đây
@@ -116,8 +118,7 @@ Route::middleware([
             ]);
 
         } elseif ($user->role === 'teacher' || $user->role === 'admin') {
-            return Inertia::render('Dashboard');
-        }
+            return app(DashboardController::class)->index();        }
         
         return Inertia::render('Dashboard');
 
@@ -198,6 +199,9 @@ Route::middleware([
 // ===== ROUTES NỘP BÀI (SUBMISSIONS) =====
 // (Nằm ngoài group 'verified' để có thể truy cập, nhưng vẫn cần 'auth')
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/analytics/class/{team}', [AnalyticsController::class, 'show'])
+     ->name('analytics.class.show');
+     
     Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
         ->name('submissions.store');
 

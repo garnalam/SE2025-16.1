@@ -88,7 +88,11 @@ const removeTeamMember = () => {
 };
 
 const displayableRole = (role) => {
-    return props.availableRoles.find(r => r.key === role).name;
+    // 1. Tìm vai trò
+    const foundRole = props.availableRoles.find(r => r.key === role);
+
+    // 2. Nếu tìm thấy, trả về tên. Nếu không, trả về một giá trị dự phòng.
+    return foundRole ? foundRole.name : 'Chưa có vai trò';
 };
 </script>
 
