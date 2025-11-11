@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
 
         // 2. Thêm Flash Messages (cho thông báo "Tham gia thành công")
         $shared['flash'] = [
+            'success' => $request->session()->get('success'), // <-- THÊM DÒNG NÀY
             'status' => $request->session()->get('status'),
             'error' => $request->session()->get('error'),
         ];

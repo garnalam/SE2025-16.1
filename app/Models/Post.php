@@ -105,4 +105,16 @@ class Post extends Model
     {
         return $this->hasMany(Submission::class);
     }
+    // Các câu hỏi có trong bài quiz này
+    public function questions() {
+        return $this->belongsToMany(Question::class, 'post_question');
+    }
+
+    // Các lần làm bài của học sinh cho bài quiz này
+    public function attempts() {
+        return $this->hasMany(QuizAttempt::class, 'post_id');
+    }
+    public function assignedUsers() {
+        return $this->belongsToMany(User::class, 'post_user');
+    }
 }

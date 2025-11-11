@@ -48,11 +48,11 @@ class PostController extends Controller
         // 3. Validate dữ liệu
         try {
             $validated = $request->validate([
-                'post_type' => ['required', Rule::in(['text', 'poll', 'material', 'assignment'])],
+                'post_type' => ['required', Rule::in(['text', 'poll', 'material', 'assignment', 'quiz'])],
                 
                 // --- Validation NỘI DUNG (content) ---
                 'content' => [
-                    Rule::requiredIf(in_array($request->input('post_type'), ['text', 'poll', 'assignment'])), 
+                    Rule::requiredIf(in_array($request->input('post_type'), ['text', 'poll', 'assignment', 'quiz'])), 
                     'nullable',
                     'string',
                     'max:5000'
@@ -72,7 +72,7 @@ class PostController extends Controller
                 
                 // --- Validation cho Assignment (ĐÃ SỬA) ---
                 'title' => [
-                    'required_if:post_type,assignment',
+                    Rule::requiredIf(in_array($request->input('post_type'), ['assignment', 'quiz'])),
                     'nullable', // <-- THÊM DÒNG NÀY ĐỂ SỬA LỖI
                     'string',
                     'max:255'
@@ -135,7 +135,7 @@ class PostController extends Controller
         });
 
         // 8. Quay lại
-        return back(303);
+        return back(303)->with('success', 'Đã đăng bài thành công!');
     }
 
     /**

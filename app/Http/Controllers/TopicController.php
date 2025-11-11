@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Models\QuizAttempt;
 
 
 class TopicController extends Controller
@@ -105,10 +106,11 @@ class TopicController extends Controller
 
         // Lấy bài nộp của học sinh (Giữ nguyên của bạn)
         $userSubmissions = collect(); 
+        $userQuizAttempts = collect();
         if (!$permissions['canManageTopics']) {
-            $userSubmissions = Submission::where('user_id', Auth::id())
-                                ->whereIn('post_id', $posts->pluck('id')) 
-                                ->with('files') 
+            $userQuizAttempts = QuizAttempt::where('user_id', Auth::id())
+                                ->whereIn('post_id', $posts->pluck('id'))
+                                ->whereNotNull('completed_at') // Chỉ lấy bài đã nộp
                                 ->get()
                                 ->keyBy('post_id'); 
         }
@@ -141,6 +143,7 @@ class TopicController extends Controller
             'authUserId' => Auth::id(),
             'permissions' => $permissions, 
             'userSubmissions' => $userSubmissions, 
+            'userQuizAttempts' => $userQuizAttempts,
         ]);
     }
 
