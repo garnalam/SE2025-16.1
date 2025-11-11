@@ -86,4 +86,29 @@ class User extends Authenticatable
     {
         return $this->hasMany(Submission::class);
     }
+    // Ngân hàng câu hỏi của giáo viên
+    public function questions() {
+        return $this->hasMany(Question::class);
+    }
+
+    // Các lần làm bài của học sinh
+    public function quizAttempts() {
+        return $this->hasMany(QuizAttempt::class);
+    }
+    public function subjects() {
+        return $this->hasMany(Subject::class);
+    }
+
+    // Các thẻ của giáo viên này
+    public function tags() {
+        return $this->hasMany(Tag::class);
+    }
+    // Các mẫu quiz của giáo viên
+    public function quizTemplates() {
+        return $this->hasMany(QuizTemplate::class);
+    }
+    // Các bài quiz được giao cho học sinh
+    public function assignedPosts() {
+        return $this->belongsToMany(Post::class, 'post_user');
+    }
 }

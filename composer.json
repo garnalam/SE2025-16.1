@@ -15,6 +15,7 @@
         "laravel/jetstream": "^5.3",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "maatwebsite/excel": "^4.0@dev",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

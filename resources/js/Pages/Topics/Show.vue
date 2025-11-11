@@ -19,6 +19,7 @@ const props = defineProps({
     permissions: Object,
     authUserId: Number, 
     userSubmissions: Object,
+    userQuizAttempts: Object,
 });
 
 // (Logic 'showCreatePostForm' và 'toggleLock' của bạn giữ nguyên)
@@ -63,8 +64,7 @@ const confirmDeletePost = (postId) => {
 <template>
     <AppLayout :title="topic.name">
         <template #header>
-            <!-- (Header của bạn giữ nguyên) -->
-             <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     <Link :href="route('teams.feed', team)" class="text-indigo-600 hover:text-indigo-800">
                         {{ team.name }}
@@ -84,7 +84,10 @@ const confirmDeletePost = (postId) => {
         <div>
             <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
                 
-                <!-- (Form Tạo Bài Đăng của bạn giữ nguyên) -->
+                <div v-if="$page.props.flash.success" class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                    {{ $page.props.flash.success }}
+                </div>
+
                 <div v-if="showCreatePostForm">
                     <CreatePostForm 
                         :team="team" 
@@ -108,25 +111,18 @@ const confirmDeletePost = (postId) => {
                     <div class="mt-4 space-y-4">
                         <div v-if="posts.length > 0" class="space-y-4">
                             
-                            <!-- ===== BẮT ĐẦU CẤU TRÚC LẠI ===== -->
-                            <!-- Lặp qua các bài đăng -->
                             <div v-for="post in posts" :key="post.id" class="bg-white shadow-sm rounded-lg">
                                 <div class="p-4 sm:p-6">
                                     
-                                    <!-- (1) HEADER CHUNG (USER + NÚT 3 CHẤM) -->
                                     <div class="flex justify-between items-start mb-3">
-                                        <!-- Thông tin người đăng -->
                                         <div class="flex items-center">
                                             <img class="h-8 w-8 rounded-full object-cover" :src="post.user.profile_photo_url" :alt="post.user.name">
                                             <div class="ml-3">
                                                 <div class="font-medium text-gray-900">{{ post.user.name }}</div>
-                                                <!-- Dùng 'created_at_formatted' từ Controller -->
                                                 <div class="text-sm text-gray-500">{{ post.created_at_formatted }}</div>
                                             </div>
                                         </div>
                                         
-                                        <!-- Nút 3 chấm (Sửa/Xóa) -->
-                                        <!-- Sửa lỗi: Đảm bảo post.can tồn tại trước khi truy cập -->
                                         <div v-if="post.can && (post.can.update || post.can.delete)" class="relative">
                                             <Dropdown align="right" width="48">
                                                 <template #trigger>
@@ -148,7 +144,6 @@ const confirmDeletePost = (postId) => {
                                         </div>
                                     </div>
 
-                                    <!-- (2) NỘI DUNG CHUYÊN BIỆT (v-if/v-else) -->
                                     <div class="content-container space-y-2">
                                         
                                         <AssignmentView
@@ -158,6 +153,48 @@ const confirmDeletePost = (postId) => {
                                             :user-submission="userSubmissions[post.id]"
                                         />
 
+                                        <div v-else-if="post.post_type === 'quiz'" class="space-y-3">
+                                            <h3 class="font-bold text-lg text-purple-700">✏️ Bài kiểm tra trắc nghiệm</h3>
+                                            <p class="whitespace-pre-wrap">{{ post.content }}</p>
+
+                                            <div v-if="post.can && post.can.update">
+                                                <Link
+                                                    :href="route('post.quiz.manage', post.id)"
+                                                    class="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-md hover:bg-indigo-200 transition duration-150"
+                                                >
+                                                    Quản lý câu hỏi
+                                                </Link>
+                                            </div>
+
+                                            <div v-if="post.can && !post.can.update">
+
+                                                <div v-if="props.userQuizAttempts[post.id]" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                                    <p class="font-semibold text-green-800">Bạn đã hoàn thành:</p>
+                                                    <p class="text-2xl font-bold text-green-700">
+                                                        {{ Number(props.userQuizAttempts[post.id].score).toFixed(2) }} / {{ post.max_points || 100 }} điểm
+                                                    </p>
+                                                    <Link 
+                                                        :href="route('quiz.results', props.userQuizAttempts[post.id].id)" 
+                                                        class="text-sm text-green-600 hover:text-green-800 hover:underline"
+                                                    >
+                                                        Xem lại kết quả
+                                                    </Link>
+                                                </div>
+
+                                                <Link
+                                                    v-else
+                                                    :href="route('quiz.start', post.id)"
+                                                    method="post"
+                                                    as="button"
+                                                    class="inline-block mt-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150"
+                                                >
+                                                    Bắt đầu làm bài
+                                                </Link>
+                                            </div>
+                                        </div>
+                                        <p v-else-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
+                                            {{ post.content }}
+                                        </p>
                                         <p v-else-if="post.post_type === 'text'" class="text-gray-700 whitespace-pre-wrap">
                                             {{ post.content }}
                                         </p>
@@ -188,7 +225,6 @@ const confirmDeletePost = (postId) => {
                                         </div>
                                     </div>
 
-                                    <!-- (3) FOOTER CHUNG (BÌNH LUẬN) -->
                                     <CommentSection
                                         :post="post"
                                         :topic="topic"
@@ -196,8 +232,7 @@ const confirmDeletePost = (postId) => {
                                     />
                                 </div>
                             </div>
-                            <!-- ===== KẾT THÚC CẤU TRÚC LẠI ===== -->
-                        </div>
+                            </div>
                         
                         <div v-else class="text-center text-gray-500 py-6">
                             Chưa có bài đăng nào trong chủ đề này.
@@ -209,8 +244,6 @@ const confirmDeletePost = (postId) => {
             </div>
         </div>
 
-        <!-- MODAL SỬA BÀI ĐĂNG (MỚI) -->
-        <!-- Đảm bảo `editingPost` không null trước khi truyền -->
         <EditPostModal
             :show="editingPost !== null"
             :post="editingPost"
@@ -219,4 +252,3 @@ const confirmDeletePost = (postId) => {
 
     </AppLayout>
 </template>
-

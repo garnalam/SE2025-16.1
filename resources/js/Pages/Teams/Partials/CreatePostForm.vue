@@ -14,10 +14,10 @@ import InputLabel from '@/Components/InputLabel.vue';
 const props = defineProps({
     team: Object,
     topic: Object,
-    canManageTopics: Boolean, // <-- THÊM PROP NÀY ĐỂ NHẬN QUYỀN
+    canManageTopics: Boolean,
 });
 
-// 'text', 'poll', 'material', 'assignment'
+// 'text', 'poll', 'material', 'assignment', 'quiz'
 const postType = ref('text'); 
 
 const switchTo = (type) => {
@@ -32,7 +32,7 @@ const form = useForm({
     poll_options: ['', ''],
     title: '',
     due_date: '',
-    max_points: 100, 
+    max_points: '100', 
     files: [], 
 });
 
@@ -49,18 +49,15 @@ const removePollOption = (index) => {
 
 // --- Logic File Upload ---
 const fileInput = ref(null); 
-
 const handleFileChange = (event) => {
     form.files = Array.from(event.target.files);
 };
-
 const removeFile = (index) => {
     form.files.splice(index, 1);
     if (form.files.length === 0 && fileInput.value) {
         fileInput.value.value = null;
     }
 };
-
 const clearFiles = () => {
     form.files = [];
     if (fileInput.value) {
@@ -72,6 +69,11 @@ const clearFiles = () => {
 
 const createPost = () => {
     form.post_type = postType.value;
+
+    // Khi tạo quiz, reset max_points về null (sẽ được tính sau)
+    if (form.post_type === 'quiz') {
+        form.max_points = null; 
+    }
 
     form.post(route('posts.store', props.topic), {
         errorBag: 'createPost',
@@ -92,15 +94,15 @@ const createPost = () => {
         </template>
 
         <template #description>
-            Tạo thông báo, tài liệu, bài tập hoặc cuộc bình chọn mới.
+            Tạo thông báo, tài liệu, bài tập, quiz hoặc cuộc bình chọn mới.
         </template>
 
         <template #form>
             
-            <!-- Tabs Lựa chọn (ĐÃ THÊM v-if) -->
+            <!-- Tabs Lựa chọn -->
             <div class="col-span-6 sm:col-span-4 mb-4">
                 <div class="flex flex-wrap gap-2">
-                    <!-- 1. Tab Thông báo (Luôn hiển thị) -->
+                    <!-- 1. Tab Thông báo -->
                     <button
                         type="button"
                         @click="switchTo('text')"
@@ -109,7 +111,7 @@ const createPost = () => {
                     >
                         📝 Thông báo
                     </button>
-                    <!-- 2. Tab Tài liệu (Chỉ Teacher thấy) -->
+                    <!-- 2. Tab Tài liệu -->
                     <button
                         v-if="props.canManageTopics"
                         type="button"
@@ -119,7 +121,7 @@ const createPost = () => {
                     >
                         📚 Tài liệu
                     </button>
-                    <!-- 3. Tab Bài tập (Chỉ Teacher thấy) -->
+                    <!-- 3. Tab Bài tập -->
                     <button
                         v-if="props.canManageTopics"
                         type="button"
@@ -129,7 +131,24 @@ const createPost = () => {
                     >
                         🧑‍💻 Bài tập
                     </button>
-                    <!-- 4. Tab Bình chọn (Luôn hiển thị) -->
+
+                    <!-- ============================================== -->
+                    <!-- ===== BẮT ĐẦU THÊM MỚI (NÚT TAB QUIZ) ===== -->
+                    <!-- ============================================== -->
+                    <button
+                        v-if="props.canManageTopics"
+                        type="button"
+                        @click="switchTo('quiz')"
+                        :class="postType === 'quiz' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+                        class="px-4 py-2 rounded-md font-semibold text-sm transition"
+                    >
+                        ✏️ Bài Quiz
+                    </button>
+                    <!-- ============================================== -->
+                    <!-- ====== KẾT THÚC THÊM MỚI (NÚT TAB QUIZ) ===== -->
+                    <!-- ============================================== -->
+
+                    <!-- 4. Tab Bình chọn -->
                     <button
                         type="button"
                         @click="switchTo('poll')"
@@ -144,6 +163,7 @@ const createPost = () => {
 
             <!-- 1. Form cho THÔNG BÁO (text) -->
             <div v-if="postType === 'text'" class="col-span-6 sm:col-span-4 space-y-4">
+                <!-- ... (code form text của bạn giữ nguyên) ... -->
                 <div>
                     <InputLabel for="content_text" value="Nội dung thông báo" />
                     <TextArea
@@ -156,9 +176,10 @@ const createPost = () => {
                 </div>
             </div>
 
-            <!-- 2. Form cho TÀI LIỆU (material) (Thêm v-if) -->
+            <!-- 2. Form cho TÀI LIỆU (material) -->
             <div v-if="postType === 'material' && props.canManageTopics" class="col-span-6 sm:col-span-4 space-y-4">
-                <div>
+                <!-- ... (code form material của bạn giữ nguyên) ... -->
+                 <div>
                     <InputLabel for="content_material" value="Mô tả tài liệu" />
                     <TextArea
                         id="content_material"
@@ -169,24 +190,16 @@ const createPost = () => {
                     />
                     <InputError :message="form.errors.content" class="mt-2" />
                 </div>
-                <!-- VÙNG UPLOAD FILE -->
                 <div class="col-span-6 sm:col-span-4">
                     <InputLabel value="Đính kèm file (Video, PDF, Word...)" />
                     <input 
                         ref="fileInput"
                         type="file" 
                         multiple
-                        class="mt-1 block w-full text-sm text-gray-500
-                               file:mr-4 file:py-2 file:px-4
-                               file:rounded-full file:border-0
-                               file:text-sm file:font-semibold
-                               file:bg-indigo-50 file:text-indigo-700
-                               hover:file:bg-indigo-100"
+                        class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                         @change="handleFileChange"
                     >
                     <InputError :message="form.errors.files" class="mt-2" />
-                    
-                    <!-- Sửa lỗi startsWith -->
                     <template v-for="(error, index) in form.errors" :key="index">
                         <InputError
                             v-if="typeof index === 'string' && index.startsWith('files.')"
@@ -194,8 +207,6 @@ const createPost = () => {
                             class="mt-2"
                         />
                     </template>
-                    
-                    <!-- Hiển thị danh sách file đã chọn -->
                     <div v-if="form.files.length > 0" class="mt-2 space-y-1">
                         <div v-for="(file, index) in form.files" :key="index" class="flex justify-between items-center text-sm">
                             <span>{{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)</span>
@@ -205,8 +216,9 @@ const createPost = () => {
                 </div>
             </div>
 
-            <!-- 3. Form cho BÀI TẬP (assignment) (Thêm v-if) -->
+            <!-- 3. Form cho BÀI TẬP (assignment) -->
             <div v-if="postType === 'assignment' && props.canManageTopics" class="col-span-6 sm:col-span-4 space-y-4">
+                <!-- ... (code form assignment của bạn giữ nguyên) ... -->
                 <div>
                     <InputLabel for="title_assignment" value="Tiêu đề bài tập" />
                     <TextInput
@@ -218,7 +230,6 @@ const createPost = () => {
                     />
                     <InputError :message="form.errors.title" class="mt-2" />
                 </div>
-
                 <div>
                     <InputLabel for="content_assignment" value="Hướng dẫn / Mô tả" />
                     <TextArea
@@ -229,25 +240,16 @@ const createPost = () => {
                     />
                     <InputError :message="form.errors.content" class="mt-2" />
                 </div>
-
-                <!-- VÙNG UPLOAD FILE -->
                 <div class="col-span-6 sm:col-span-4">
                     <InputLabel value="File đính kèm (nếu có)" />
                      <input 
                         ref="fileInput"
                         type="file" 
                         multiple
-                        class="mt-1 block w-full text-sm text-gray-500
-                               file:mr-4 file:py-2 file:px-4
-                               file:rounded-full file:border-0
-                               file:text-sm file:font-semibold
-                               file:bg-indigo-50 file:text-indigo-700
-                               hover:file:bg-indigo-100"
+                        class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                         @change="handleFileChange"
                     >
                     <InputError :message="form.errors.files" class="mt-2" />
-                    
-                    <!-- Sửa lỗi startsWith -->
                     <template v-for="(error, index) in form.errors" :key="index">
                         <InputError
                             v-if="typeof index === 'string' && index.startsWith('files.')"
@@ -255,7 +257,6 @@ const createPost = () => {
                             class="mt-2"
                         />
                     </template>
-
                     <div v-if="form.files.length > 0" class="mt-2 space-y-1">
                         <div v-for="(file, index) in form.files" :key="index" class="flex justify-between items-center text-sm">
                             <span>{{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)</span>
@@ -263,7 +264,6 @@ const createPost = () => {
                         </div>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <InputLabel for="due_date" value="Ngày hết hạn (Tùy chọn)" />
@@ -291,6 +291,7 @@ const createPost = () => {
 
             <!-- 4. Form cho BÌNH CHỌN (poll) -->
             <div v-if="postType === 'poll'" class="col-span-6 sm:col-span-4 space-y-4">
+                <!-- ... (code form poll của bạn giữ nguyên) ... -->
                 <div>
                     <InputLabel for="content_poll" value="Câu hỏi bình chọn" />
                     <TextArea
@@ -302,7 +303,6 @@ const createPost = () => {
                     />
                     <InputError :message="form.errors.content" class="mt-2" />
                 </div>
-                
                 <div>
                     <InputLabel value="Các lựa chọn (Tối thiểu 2)" />
                     <div v-for="(option, index) in form.poll_options" :key="index" class="flex items-center mt-2">
@@ -322,7 +322,6 @@ const createPost = () => {
                             Xóa
                         </DANGERBUTTON>
                     </div>
-                    
                     <InputError :message="form.errors.poll_options" class="mt-2" />
                     <template v-for="(error, index) in form.errors" :key="index">
                         <InputError
@@ -331,7 +330,6 @@ const createPost = () => {
                             class="mt-2"
                         />
                     </template>
-
                     <SecondaryButton
                         type="button"
                         @click="addPollOption"
@@ -342,6 +340,53 @@ const createPost = () => {
                     </SecondaryButton>
                 </div>
             </div>
+
+            <!-- ============================================== -->
+            <!-- ===== BẮT ĐẦU THÊM MỚI (FORM QUIZ) ===== -->
+            <!-- ============================================== -->
+            <div v-if="postType === 'quiz' && props.canManageTopics" class="col-span-6 sm:col-span-4 space-y-4">
+                <div>
+                    <InputLabel for="title_quiz" value="Tiêu đề bài kiểm tra" />
+                    <TextInput
+                        id="title_quiz"
+                        v-model="form.title"
+                        type="text"
+                        class="mt-1 block w-full"
+                        placeholder="Ví dụ: Bài kiểm tra 15 phút - Chương 1"
+                    />
+                    <InputError :message="form.errors.title" class="mt-2" />
+                </div>
+
+                <div>
+                    <InputLabel for="content_quiz" value="Hướng dẫn / Mô tả" />
+                    <TextArea
+                        id="content_quiz"
+                        v-model="form.content"
+                        class="mt-1 block w-full"
+                        rows="5"
+                        placeholder="Mô tả nội dung, thời gian làm bài (nếu có), và các quy định..."
+                    />
+                    <InputError :message="form.errors.content" class="mt-2" />
+                </div>
+                
+                <div>
+                    <InputLabel for="due_date_quiz" value="Ngày hết hạn (Tùy chọn)" />
+                    <TextInput
+                        id="due_date_quiz"
+                        v-model="form.due_date"
+                        type="datetime-local"
+                        class="mt-1 block w-full"
+                    />
+                    <InputError :message="form.errors.due_date" class="mt-2" />
+                </div>
+                <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+                    <p class="font-bold">Bước tiếp theo:</p>
+                    <p>Sau khi đăng bài, bạn sẽ thấy link **"Quản lý câu hỏi"** bên cạnh bài quiz này để thêm câu hỏi từ ngân hàng.</p>
+                </div>
+            </div>
+            <!-- ============================================== -->
+            <!-- ====== KẾT THÚC THÊM MỚI (FORM QUIZ) ===== -->
+            <!-- ============================================== -->
 
         </template>
 
@@ -360,4 +405,3 @@ const createPost = () => {
         </template>
     </FormSection>
 </template>
-

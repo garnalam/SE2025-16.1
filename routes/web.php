@@ -1,10 +1,10 @@
 <?php
-use App\Http\Controllers\Teacher\AnalyticsController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\QuestionController;
 use App\Models\Submission;
 use Illuminate\Foundation\Application;
-use App\Http\Controllers\Teacher\DashboardController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PostQuizController;
 use Inertia\Inertia;
 // use App\Http\Controllers\PostController; // <-- Đã di chuyển khỏi đây
 use App\Models\Team;
@@ -19,8 +19,14 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\SubmissionController; 
 use App\Models\Topic; 
 use App\Models\Post;
+use App\Http\Controllers\QuizAttemptController;
 use Illuminate\Support\Facades\Auth; // <-- Đã di chuyển lên đây
 use Carbon\Carbon; // <-- Đã di chuyển lên đây
+use App\Http\Controllers\SubjectController; // Thêm
+use App\Http\Controllers\TagController;     // Thêm
+use App\Http\Controllers\QuestionImportController;
+use App\Http\Controllers\QuizTemplateController;
+use App\Models\QuizTemplate;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -42,6 +48,9 @@ Route::middleware([
     'verified',
 ])->group(function () {
     
+    Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
+
     // ===== LOGIC DASHBOARD =====
     Route::get('/dashboard', function () {
         $user = Auth::user(); // Dùng Auth::user()
@@ -118,7 +127,8 @@ Route::middleware([
             ]);
 
         } elseif ($user->role === 'teacher' || $user->role === 'admin') {
-            return app(DashboardController::class)->index();        }
+            return Inertia::render('Dashboard');
+        }
         
         return Inertia::render('Dashboard');
 
@@ -154,6 +164,63 @@ Route::middleware([
     // ===== ROUTES BÌNH LUẬN (COMMENTS) =====
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
 
+    Route::get('/questions/import', [QuestionImportController::class, 'create'])->name('questions.import.create');
+    Route::post('/questions/import', [QuestionImportController::class, 'store'])->name('questions.import.store');
+    Route::get('/questions/import/template', [QuestionImportController::class, 'downloadTemplate'])->name('questions.import.template');
+
+
+    // ===== ROUTES NGÂN HÀNG CÂU HỎI (Questions) - THÊM MỚI =====
+    Route::resource('questions', QuestionController::class);
+    // =========================================================
+
+    // ===== ROUTES QUẢN LÝ CÂU HỎI TRONG QUIZ (Post) - THÊM MỚI =====
+    // 1. Trang để quản lý (thêm/bớt) câu hỏi cho một bài quiz
+    Route::get('/posts/{post}/quiz/manage', [PostQuizController::class, 'manage'])
+         ->name('post.quiz.manage');
+         
+    // 2. Route để GẮN (attach) một câu hỏi từ ngân hàng vào bài quiz
+    Route::post('/posts/{post}/quiz/attach', [PostQuizController::class, 'attach'])
+         ->name('post.quiz.attach');
+         
+    // 3. Route để GỠ (detach) một câu hỏi khỏi bài quiz
+    Route::delete('/posts/{post}/quiz/detach', [PostQuizController::class, 'detach'])
+         ->name('post.quiz.detach');
+    // =================================================================
+    // 1. Route để xử lý logic "TẠO ĐỀ TỰ ĐỘNG"
+    Route::post('/posts/{post}/quiz/generate', [PostQuizController::class, 'generate'])
+         ->name('post.quiz.generate');
+    // ================================================================
+    Route::post('/posts/{post}/quiz/save-manual', [PostQuizController::class, 'saveManualSettings'])->name('post.quiz.saveManual');
+    
+
+    // 2. Routes để LƯU/XÓA "CẤU HÌNH MẪU" (Ý tưởng 1 của bạn)
+    Route::resource('quiz-templates', QuizTemplateController::class)
+         ->only(['store', 'destroy']);
+
+    // 1. Nút "Bắt đầu làm bài"
+    Route::post('/posts/{post}/quiz/start', [QuizAttemptController::class, 'start'])
+         ->name('quiz.start');
+
+    // 2. Hiển thị một câu hỏi (vd: .../question/1, .../question/2)
+    Route::get('/attempt/{attempt}/question/{questionNumber}', [QuizAttemptController::class, 'showQuestion'])
+         ->name('quiz.question.show');
+
+    // 3. Lưu câu trả lời cho câu hỏi đó
+    Route::post('/attempt/{attempt}/question/{questionNumber}', [QuizAttemptController::class, 'saveAnswer'])
+         ->name('quiz.question.save');
+
+    // 4. Hiển thị trang xác nhận nộp bài
+    Route::get('/attempt/{attempt}/submit', [QuizAttemptController::class, 'submitPage'])
+         ->name('quiz.submitPage');
+
+    // 5. Nộp bài và chấm điểm
+    Route::post('/attempt/{attempt}/submit', [QuizAttemptController::class, 'finishAttempt'])
+         ->name('quiz.finish');
+         
+    // 6. Trang xem kết quả
+    Route::get('/attempt/{attempt}/results', [QuizAttemptController::class, 'showResults'])
+         ->name('quiz.results');
+    // =======================================================
 
     // ===== ROUTE TRANG FEED (ĐÃ SỬA) =====
     Route::get('/teams/{team}/feed', function (Team $team) {
@@ -199,9 +266,6 @@ Route::middleware([
 // ===== ROUTES NỘP BÀI (SUBMISSIONS) =====
 // (Nằm ngoài group 'verified' để có thể truy cập, nhưng vẫn cần 'auth')
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/analytics/class/{team}', [AnalyticsController::class, 'show'])
-     ->name('analytics.class.show');
-     
     Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
         ->name('submissions.store');
 
@@ -214,4 +278,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])
         ->name('submissions.downloadFile');
 });
+
 

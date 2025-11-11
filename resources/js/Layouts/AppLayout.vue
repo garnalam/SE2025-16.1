@@ -53,7 +53,7 @@ const openJoinModal = () => {
     <div>
         <Head :title="title" />
 
-        <!-- <Banner /> --> <!-- <-- TÔI ĐÃ VÔ HIỆU HÓA DÒNG NÀY -->
+        <Banner /> <!-- <-- SỬA LỖI: HÃY KÍCH HOẠT DÒNG NÀY -->
 
         <div class="min-h-screen bg-gray-100">
             <nav class="bg-white border-b border-gray-100">
@@ -79,6 +79,14 @@ const openJoinModal = () => {
                                     Lớp học hiện tại
                                 </NavLink>
                                 
+                                <NavLink 
+                                    v-if="userRole === 'teacher'" 
+                                    :href="route('questions.index')" 
+                                    :active="route().current('questions.index')"
+                                >
+                                    Ngân hàng câu hỏi
+                                </NavLink>
+
                                 <!-- Nút "+" Tham gia Lớp (Desktop) -->
                                 <button 
                                     v-if="userRole === 'student'"
@@ -125,6 +133,12 @@ const openJoinModal = () => {
                                                     Cài đặt Lớp học
                                                 </DropdownLink>
 
+                                                <div class="border-t border-gray-200" />
+                                                <DropdownLink :href="route('questions.index')">
+                                                    Ngân hàng câu hỏi
+                                                </DropdownLink>
+                                                <div class="border-t border-gray-200" />
+                                                
                                                 <DropdownLink v-if="canCreateTeams" :href="route('teams.create')">
                                                     Tạo Lớp học mới
                                                 </DropdownLink>
@@ -236,6 +250,14 @@ const openJoinModal = () => {
                         
                         <ResponsiveNavLink v-if="currentTeam" :href="route('teams.feed', currentTeam)" :active="route().current('teams.feed')">
                             Lớp học hiện tại
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink 
+                            v-if="userRole === 'teacher'" 
+                            :href="route('questions.index')" 
+                            :active="route().current('questions.index')"
+                        >
+                            Ngân hàng câu hỏi
                         </ResponsiveNavLink>
 
                         <!-- Nút Tham gia Lớp (Mobile) -->
