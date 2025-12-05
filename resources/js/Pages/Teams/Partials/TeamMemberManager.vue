@@ -88,7 +88,9 @@ const removeTeamMember = () => {
 };
 
 const displayableRole = (role) => {
-    return props.availableRoles.find(r => r.key === role).name;
+    const foundRole = props.availableRoles.find(r => r.key === role);
+    // Nếu tìm thấy thì trả về name, nếu không thì trả về key của role đó (để debug)
+    return foundRole ? foundRole.name : role;
 };
 </script>
 
