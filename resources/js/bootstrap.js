@@ -11,9 +11,13 @@ Pusher.logToConsole = true; // Giữ nguyên để debug
 
 window.Echo = new Echo({
     broadcaster: 'pusher',
-    key: 'fa7f71cbdbed552b1a74', // Key của bạn
-    cluster: 'ap1',
+    
+    // 👇 SỬA Ở ĐÂY: Đọc từ biến môi trường Vite
+    key: import.meta.env.VITE_PUSHER_APP_KEY,
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'ap1',
     forceTLS: true,
+
+    // Phần authorizer này bạn viết đúng rồi, giữ nguyên
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {

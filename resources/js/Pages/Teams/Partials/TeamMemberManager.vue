@@ -95,6 +95,7 @@ const displayableRole = (role) => {
 </script>
 
 <template>
+    
     <div>
         <div v-if="userPermissions.canAddTeamMembers">
             <SectionBorder />
@@ -191,6 +192,19 @@ const displayableRole = (role) => {
 
                 <!-- Pending Team Member Invitation List -->
                 <template #content>
+                    <div class="p-4 mb-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded text-xs font-mono">
+                        <strong>🔍 DEBUG LOG:</strong>
+                        <ul class="list-disc ml-4 mt-2">
+                            <li>Available Roles: {{ availableRoles.length }}</li>
+                            <li>Can Update: {{ userPermissions.canUpdateTeamMembers }}</li>
+                            <li>My ID: {{ $page.props.auth.user.id }}</li>
+                            <li>Owner ID: {{ team.user_id }}</li>
+                        </ul>
+                        <div class="mt-2">
+                             <strong>Dữ liệu Roles:</strong>
+                             <pre>{{ availableRoles }}</pre>
+                        </div>
+                    </div>
                     <div class="space-y-6">
                         <div v-for="invitation in team.team_invitations" :key="invitation.id" class="flex items-center justify-between">
                             <div class="text-gray-600">

@@ -7,8 +7,11 @@ use Laravel\Jetstream\Events\TeamCreated;
 use Laravel\Jetstream\Events\TeamDeleted;
 use Laravel\Jetstream\Events\TeamUpdated;
 use Laravel\Jetstream\Team as JetstreamTeam;
-use Illuminate\Support\Str; // <-- CHỈ CẦN THÊM DÒNG NÀY
-use Illuminate\Database\Eloquent\Relations\HasMany; // <-- 1. THÊM DÒNG NÀY
+use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <--- 1. THÊM DÒNG NÀY
+use Laravel\Jetstream\Jetstream; // <--- 2. THÊM DÒNG NÀY
+
 class Team extends JetstreamTeam
 {
     use HasFactory;
@@ -30,7 +33,7 @@ class Team extends JetstreamTeam
     protected $fillable = [
         'name',
         'personal_team',
-        'join_code', // <-- Đã thêm ở bước trước
+        'join_code',
     ];
 
     /**
@@ -51,38 +54,43 @@ class Team extends JetstreamTeam
     {
         parent::boot();
 
-        /**
-         * Tự động tạo join_code khi một team mới (lớp học) được tạo.
-         */
         static::creating(function ($team) {
-            // Chúng ta chỉ tạo mã cho các lớp học (không phải personal team)
             if ($team->personal_team === false) {
                 $team->join_code = self::generateUniqueJoinCode();
             }
         });
     }
 
-    /**
-     * Tạo một mã join_code duy nhất theo định dạng xxx-yyy-zzz.
-     */
     protected static function generateUniqueJoinCode(): string
     {
         do {
-            // Tạo mã ngẫu nhiên, chữ thường, 9 ký tự
             $code = sprintf('%s-%s-%s',
                 Str::lower(Str::random(3)),
                 Str::lower(Str::random(3)),
                 Str::lower(Str::random(3))
             );
-            // Kiểm tra xem mã đã tồn tại hay chưa, nếu rồi thì lặp lại
         } while (static::where('join_code', $code)->exists());
 
         return $code;
     }
 
+    // --- 👇 ĐÂY LÀ PHẦN QUAN TRỌNG BẠN ĐANG THIẾU 👇 ---
+    
+    /**
+     * Ghi đè quan hệ users để lấy thêm cột 'role'
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(Jetstream::userModel(), Jetstream::membershipModel())
+                    ->withPivot('role') // Quan trọng nhất: Lấy cột role từ bảng trung gian
+                    ->withTimestamps()
+                    ->as('membership');
+    }
+
+    // ---------------------------------------------------
+
     public function posts(): HasMany
     {
-        // Định nghĩa mối quan hệ "Một Team có nhiều Post"
         return $this->hasMany(Post::class);
     }
 

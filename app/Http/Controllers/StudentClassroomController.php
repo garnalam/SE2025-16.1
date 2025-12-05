@@ -40,8 +40,7 @@ class StudentClassroomController extends Controller
         }
 
         // 5. THÊM HỌC SINH VÀO LỚP:
-        $student->teams()->attach($team);
-
+        $student->teams()->attach($team, ['role' => 'student']);
         // ===== THÊM MỚI (FIX LỖI) =====
         // Tự động chuyển học sinh sang lớp học này
         // nếu họ chưa có lớp học hiện tại (current_team_id == null)

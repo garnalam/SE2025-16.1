@@ -6,6 +6,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostQuizController;
 use Inertia\Inertia;
+use App\Http\Controllers\Teacher\AnalyticsController;
+use App\Http\Controllers\Teacher\DashboardController;
+
 // use App\Http\Controllers\PostController; // <-- Đã di chuyển khỏi đây
 use App\Models\Team;
 use Illuminate\Http\Request;
@@ -52,87 +55,112 @@ Route::middleware([
     Route::resource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // ===== LOGIC DASHBOARD =====
-    Route::get('/dashboard', function () {
-        $user = Auth::user(); // Dùng Auth::user()
+Route::get('/dashboard', function () {
+    $user = Auth::user();
+    $currentTeam = $user->currentTeam; // Lấy lớp học hiện tại đang chọn
+
+    // --- BƯỚC 1: XÁC ĐỊNH QUYỀN HẠN (IS TEACHER?) ---
+    // Logic: Là giáo viên nếu:
+    // 1. Là Admin toàn hệ thống (user.role = admin)
+    // 2. HOẶC là Chủ phòng (Owner) của team hiện tại
+    // 3. HOẶC có role là 'teacher' trong team hiện tại (quan trọng nhất)
+    
+    $isTeacher = false;
+
+    if ($user->role === 'admin') {
+        $isTeacher = true;
+    } elseif ($currentTeam) {
+        // Kiểm tra quyền trong lớp học cụ thể
+        if ($user->ownsTeam($currentTeam) || $user->hasTeamRole($currentTeam, 'teacher')) {
+            $isTeacher = true;
+        }
+    }
+
+    // --- BƯỚC 2: ĐIỀU HƯỚNG GIAO DIỆN ---
+    
+    if ($isTeacher) {
+        // ==> LOAD DASHBOARD GIÁO VIÊN
+        // (Nếu bạn có DashboardController thì dùng dòng dưới, không thì dùng Inertia::render('Dashboard'))
+        return app(DashboardController::class)->index(); 
+        // return Inertia::render('Dashboard'); 
+
+    } else {
+        // ==> LOAD DASHBOARD HỌC SINH
+        // (Logic tính toán cũ của bạn được giữ nguyên bên dưới)
+
+        // Lấy ID các lớp học
+        $teamIds = $user->teams()->pluck('teams.id');
+
+        // 1. LẤY DỮ LIỆU BIỂU ĐỒ
+        $studentTeams = $user->teams()->get(['teams.id', 'teams.name']);
+        $chartLabels = [];
+        $chartData = [];
         
-        if ($user->role === 'student') {
-            
-            // Lấy ID các lớp học
-            $teamIds = $user->teams()->pluck('teams.id');
-
-            // 1. LẤY DỮ LIỆU BIỂU ĐỒ
-            $studentTeams = $user->teams()->get(['teams.id', 'teams.name']);
-            $chartLabels = [];
-            $chartData = [];
-            foreach ($studentTeams as $team) {
-                $submissions = Submission::where('user_id', $user->id)
-                    ->whereNotNull('grade')
-                    ->whereHas('post', function ($query) use ($team) {
-                        $query->where('team_id', $team->id);
-                    })
-                    ->with('post:id,max_points')
-                    ->get();
-                $totalPoints = $submissions->sum('grade');
-                $totalMaxPoints = $submissions->sum('post.max_points');
-                $averagePercent = ($totalMaxPoints > 0) 
-                                    ? ($totalPoints / $totalMaxPoints) * 100 
-                                    : 0;
-                $chartLabels[] = $team->name;
-                $chartData[] = round($averagePercent, 2);
-            }
-            $progressChartData = [
-                'labels' => $chartLabels,
-                'datasets' => [
-                    [
-                        'label'           => 'Điểm trung bình (%)',
-                        'backgroundColor' => '#4CAF50',
-                        'data'            => $chartData,
-                        'borderRadius'    => 5,
-                    ]
-                ]
-            ];
-
-            // 2. Lấy Bài tập sắp đến hạn (Dùng Carbon)
-            
-            // ===== ĐÃ DỌN DẸP DEBUG =====
-            $upcomingAssignments = Post::where('post_type', 'assignment')
-                ->whereIn('team_id', $teamIds)
-                ->where('due_date', '>=', Carbon::now()) // <-- Đã kích hoạt lại
-                ->where('due_date', '<=', Carbon::now()->addDays(7)) // <-- Đã kích hoạt lại
-                ->whereDoesntHave('submissions', function ($query) use ($user) {
-                    $query->where('user_id', $user->id); // Chỉ lấy bài chưa nộp
+        foreach ($studentTeams as $team) {
+            $submissions = Submission::where('user_id', $user->id)
+                ->whereNotNull('grade')
+                ->whereHas('post', function ($query) use ($team) {
+                    $query->where('team_id', $team->id);
                 })
-                ->with('team:id,name')
-                ->orderBy('due_date', 'asc')
-                ->limit(5)
+                ->with('post:id,max_points')
                 ->get();
-            // ===== KẾT THÚC DỌN DẸP =====
-
-
-            // 3. Lấy Thông báo mới nhất (từ các topic bị khóa)
-            $latestAnnouncements = Post::whereIn('team_id', $teamIds)
-                ->whereHas('topic', function ($query) {
-                    $query->where('is_locked', true);
-                })
-                ->with('team:id,name')
-                ->orderBy('created_at', 'desc')
-                ->limit(5)
-                ->get();
-
-            // 4. TRẢ VỀ VIEW VỚI DỮ LIỆU MỚI
-            return Inertia::render('StudentDashboard', [
-                'progressChartData'   => $progressChartData,
-                'upcomingAssignments' => $upcomingAssignments,
-                'latestAnnouncements' => $latestAnnouncements,
-            ]);
-
-        } elseif ($user->role === 'teacher' || $user->role === 'admin') {
-            return Inertia::render('Dashboard');
+                
+            $totalPoints = $submissions->sum('grade');
+            $totalMaxPoints = $submissions->sum('post.max_points');
+            $averagePercent = ($totalMaxPoints > 0) 
+                                ? ($totalPoints / $totalMaxPoints) * 100 
+                                : 0;
+            
+            $chartLabels[] = $team->name;
+            $chartData[] = round($averagePercent, 2);
         }
         
-        return Inertia::render('Dashboard');
+        $progressChartData = [
+            'labels' => $chartLabels,
+            'datasets' => [
+                [
+                    'label'           => 'Điểm trung bình (%)',
+                    'backgroundColor' => '#4CAF50',
+                    'data'            => $chartData,
+                    'borderRadius'    => 5,
+                ]
+            ]
+        ];
 
-    })->name('dashboard');
+        // 2. Lấy Bài tập sắp đến hạn (Dùng Carbon)
+        $upcomingAssignments = Post::where('post_type', 'assignment')
+            ->whereIn('team_id', $teamIds)
+            ->where('due_date', '>=', Carbon::now()) 
+            ->where('due_date', '<=', Carbon::now()->addDays(7)) 
+            ->whereDoesntHave('submissions', function ($query) use ($user) {
+                $query->where('user_id', $user->id); // Chỉ lấy bài chưa nộp
+            })
+            ->with('team:id,name')
+            ->orderBy('due_date', 'asc')
+            ->limit(5)
+            ->get();
+
+
+        // 3. Lấy Thông báo mới nhất
+        $latestAnnouncements = Post::whereIn('team_id', $teamIds)
+            ->whereHas('topic', function ($query) {
+                $query->where('is_locked', true);
+            })
+            ->with('team:id,name')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        // 4. TRẢ VỀ VIEW STUDENT DASHBOARD
+        return Inertia::render('StudentDashboard', [
+            'progressChartData'   => $progressChartData,
+            'upcomingAssignments' => $upcomingAssignments,
+            'latestAnnouncements' => $latestAnnouncements,
+        ]);
+    }
+
+})->name('dashboard');
+
 
     // Route cho học sinh tham gia lớp học
     Route::post('/classrooms/join', [StudentClassroomController::class, 'join'])
@@ -280,7 +308,8 @@ Route::middleware([
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
         ->name('submissions.store');
-
+    Route::get('/analytics/class/{team}', [AnalyticsController::class, 'show'])
+     ->name('analytics.class.show');
     Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])
         ->name('submissions.index');
 

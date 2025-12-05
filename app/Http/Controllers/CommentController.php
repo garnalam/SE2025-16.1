@@ -75,7 +75,7 @@ class CommentController extends Controller
         // -----------------------------------------------------
         if ($comment->parent_id) {
             // Tìm comment cha để lấy người sở hữu
-            $parentComment = \App\Models\Comment::find($comment->parent_id);
+            $parentComment = Comment::find($comment->parent_id);
 
             if ($parentComment) {
                 $parentOwner = $parentComment->user;

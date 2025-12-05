@@ -27,6 +27,7 @@ class NewPostNotification extends Notification implements ShouldQueue
     // 1. Cấu trúc lưu vào Database
     public function toArray($notifiable)
     {
+
         $typeName = $this->getTypeName();
         $teamName = $this->post->topic->team->name ?? 'Lớp học';
         
@@ -41,7 +42,7 @@ class NewPostNotification extends Notification implements ShouldQueue
             'title' => 'Bài đăng mới',
             // Sửa nội dung: Thay "Giáo viên" bằng tên thật người đăng
             'message' => "[$teamName] $authorName đã đăng một $typeName",
-            
+
             'url' => route('topics.show', $this->post->topic_id),
             'user_avatar' => $this->post->user->profile_photo_url,
         ];

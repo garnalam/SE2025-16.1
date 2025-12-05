@@ -152,7 +152,7 @@ class SubmissionController extends Controller
             'graded_at' => now(),
         ]);
         // Gửi thông báo đến chính học sinh sở hữu bài nộp này
-$submission->user->notify(new \App\Notifications\SubmissionGradedNotification($submission));        return back()->with('success', 'Chấm điểm thành công!');
+$submission->user->notify(new SubmissionGradedNotification($submission));        return back()->with('success', 'Chấm điểm thành công!');
     }
     /**
  * Cho phép giáo viên download file bài nộp của học sinh.

@@ -39,32 +39,27 @@ class TeamPolicy
      */
     public function update(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        // Cho phép nếu là Chủ phòng HOẶC có role là 'teacher' trong lớp này
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'teacher');
     }
 
     /**
      * Determine whether the user can add team members.
      */
-    public function addTeamMember(User $user, Team $team): bool
-    {
-        return $user->ownsTeam($team);
-    }
+   public function addTeamMember(User $user, Team $team): bool
+{
+    return $user->ownsTeam($team) || $user->hasTeamRole($team, 'teacher');
+}
 
-    /**
-     * Determine whether the user can update team member permissions.
-     */
-    public function updateTeamMember(User $user, Team $team): bool
-    {
-        return $user->ownsTeam($team);
-    }
+public function updateTeamMember(User $user, Team $team): bool
+{
+    return $user->ownsTeam($team) || $user->hasTeamRole($team, 'teacher');
+}
 
-    /**
-     * Determine whether the user can remove team members.
-     */
-    public function removeTeamMember(User $user, Team $team): bool
-    {
-        return $user->ownsTeam($team);
-    }
+public function removeTeamMember(User $user, Team $team): bool
+{
+    return $user->ownsTeam($team) || $user->hasTeamRole($team, 'teacher');
+}
 
     /**
      * Determine whether the user can delete the model.

@@ -44,9 +44,7 @@ class ClassroomController extends Controller
 
         // 6. Thêm học sinh vào lớp học (Team)
         // Lấy vai trò mặc định cho thành viên từ config của Jetstream
-        $defaultRole = config('jetstream.roles.0.key', 'editor'); // 'editor' là giá trị dự phòng
-
-        $team->users()->attach($user, ['role' => $defaultRole]);
+        $team->users()->attach($user, ['role' => 'student']);
 
         // 7. Tự động chuyển người dùng sang lớp học vừa tham gia
         if ($user->switchTeam($team)) {
