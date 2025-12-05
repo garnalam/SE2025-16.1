@@ -7,7 +7,8 @@ use App\Models\Question;
 use Illuminate\Http\Request;
 use Inertia\Inertia; // <-- Quan trọng: dùng Inertia
 use Illuminate\Support\Facades\Gate;
-
+use Illuminate\Support\Facades\Notification; // <--- THÊM DÒNG NÀY
+use App\Notifications\NewPostNotification;   // <--- THÊM DÒNG NÀY
 use App\Models\QuizTemplate; // Thêm
 use App\Models\User;        // Thêm
 use Illuminate\Support\Facades\DB; // Thêm
@@ -183,7 +184,8 @@ class PostQuizController extends Controller
         }
 
         // 4. Bắt đầu lưu vào DB
-        DB::transaction(function () use ($post, $questionIds, $settings, $assignment) {
+        $assignedIds = [];
+        DB::transaction(function () use ($post, $questionIds, $settings, $assignment, $assignedIds) {
 
             // 4.1. Cập nhật bài Post với cài đặt mới
             $post->update([
@@ -208,12 +210,18 @@ class PostQuizController extends Controller
                     ->where('users.role', 'student') // <-- SỬA LỖI Ở ĐÂY
                     ->pluck('users.id');
                 $post->assignedUsers()->sync($allStudentIds);
+                $assignedIds = $allStudentIds; // Lưu lại để gửi thông báo
             } else {
                 // Chỉ giao cho các học sinh cụ thể
                 $post->assignedUsers()->sync($assignment['assigned_users']);
+                $assignedIds = $assignment['assigned_users']; // Lưu lại
             }
         });
-
+        // Lấy danh sách User Object từ mảng ID
+        if (!empty($assignedIds)) {
+             $studentsToNotify = User::whereIn('id', $assignedIds)->get();
+             Notification::send($studentsToNotify, new NewPostNotification($post));
+        }
         return redirect()->back()->with('success', 'Đã tạo đề ngẫu nhiên thành công với ' . $questionIds->count() . ' câu hỏi.');
     }
     public function saveManualSettings(Request $request, Post $post)
@@ -229,8 +237,8 @@ class PostQuizController extends Controller
 
         $settings = $data['settings'];
         $assignment = $data['assignment'];
-
-        DB::transaction(function () use ($post, $settings, $assignment) {
+        $assignedIds = []; // Biến tạm
+        DB::transaction(function () use ($post, $settings, $assignment,$assignedIds) {
 
             // 1. Cập nhật bài Post
             $post->update([
@@ -246,11 +254,16 @@ class PostQuizController extends Controller
                                     ->where('users.role', 'student') // Sửa lỗi ambiguous
                                     ->pluck('users.id');
                 $post->assignedUsers()->sync($allStudentIds);
+                $assignedIds = $allStudentIds;
             } else {
                 $post->assignedUsers()->sync($assignment['assigned_users']);
+                $assignedIds = $assignment['assigned_users'];
             }
         });
-
+        if (!empty($assignedIds)) {
+             $studentsToNotify = User::whereIn('id', $assignedIds)->get();
+             Notification::send($studentsToNotify, new NewPostNotification($post));
+        }
         return redirect()->back()->with('success', 'Đã lưu cài đặt cho bài quiz thủ công.');
     }
 }

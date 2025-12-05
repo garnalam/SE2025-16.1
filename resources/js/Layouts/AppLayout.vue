@@ -8,7 +8,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import JoinClassroomModal from '@/Components/JoinClassroomModal.vue'; // <-- Import Modal
-
+import NotificationBell from '@/Components/NotificationBell.vue';
 defineProps({
     title: String,
 });
@@ -103,7 +103,7 @@ const openJoinModal = () => {
                         </div>
 
                         <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            
+                            <NotificationBell class="mr-4" />
                             <!-- Teams Dropdown -->
                             <div class="ms-3 relative" v-if="hasTeamFeatures">
                                 <Dropdown align="right" width="60">

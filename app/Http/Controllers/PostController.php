@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-
+use Illuminate\Support\Facades\Notification; // <--- THÊM DÒNG NÀY
+use App\Notifications\NewPostNotification;   // <--- THÊM DÒNG NÀY
 class PostController extends Controller
 {
     /**
@@ -133,7 +134,33 @@ class PostController extends Controller
             
             return $post; 
         });
+        // ---> CHÈN CODE THÔNG BÁO VÀO ĐÂY (SAU KHI ĐÃ CÓ $post) <---
+        // =================================================================
+        
+        // 1. Lấy danh sách người nhận (Tất cả thành viên trong Team trừ người đăng)
+        // Lưu ý: Jetstream thường dùng $team->users hoặc $team->allUsers()
+        // Code dưới đây giả định relationship là 'users'
+        // Bước 1: Lấy danh sách thành viên (Học sinh)
+        $allUsers = $team->users;
 
+        // Bước 2: Thêm Giáo viên (Owner) vào danh sách này
+        // (Vì $team->users trong Jetstream không chứa Owner)
+        if ($team->owner) {
+            $allUsers = $allUsers->push($team->owner);
+        }
+
+        // Bước 3: Loại bỏ người vừa đăng bài (Tránh tự gửi cho mình)
+        $recipients = $allUsers->reject(function ($user) use ($request) {
+            return $user->id === $request->user()->id;
+        });
+
+        // Bước 4: Gửi thông báo
+        // Sử dụng Notification::send để gửi cho một tập hợp (Collection)
+        if ($recipients->count() > 0) {
+            // Đảm bảo import class: use Illuminate\Support\Facades\Notification;
+            Notification::send($recipients, new NewPostNotification($post));
+        }
+        
         // 8. Quay lại
         return back(303)->with('success', 'Đã đăng bài thành công!');
     }

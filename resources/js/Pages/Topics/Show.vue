@@ -11,7 +11,8 @@ import AssignmentView from '@/Pages/Teams/Partials/AssignmentView.vue';
 import Dropdown from '@/Components/Dropdown.vue'; // <-- THÊM
 import DropdownLink from '@/Components/DropdownLink.vue'; // <-- THÊM
 import EditPostModal from '@/Pages/Topics/Partials/EditPostModal.vue'; // <-- THÊM MODAL SỬA
-
+import { onMounted, onUnmounted } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 const props = defineProps({
     team: Object,
     topic: Object,
@@ -59,6 +60,37 @@ const confirmDeletePost = (postId) => {
         });
     }
 };
+onMounted(() => {
+    // Lấy ID của user đang đăng nhập
+    const userId = usePage().props.auth.user.id;
+
+    console.log("Bảng tin đang chờ bài mới...");
+
+    // Lắng nghe đúng cái kênh mà cái chuông đang nghe
+    Echo.private(`App.Models.User.${userId}`)
+        .notification((notification) => {
+            console.log("Nhận tín hiệu có bài mới -> Tải lại nội dung ngay!", notification);
+            
+            // 3. THỰC HIỆN RELOAD DỮ LIỆU NGẦM (Không f5 trình duyệt)
+            // 'only' giúp chỉ tải lại biến 'posts' cho nhẹ (nếu props bài viết của bạn tên là 'posts')
+            // Nếu không chắc props tên gì, bạn cứ dùng router.reload() là được.
+            if (notification.type === 'new_comment') {
+            // Reload lại để hiện bình luận mới
+            // (Nếu bạn tách comment ra props riêng thì reload props đó, không thì reload hết)
+            router.reload(); 
+        }
+            if (['new_comment', 'reply_comment'].includes(notification.type)) {
+            router.reload(); 
+        }
+            router.reload({ only: ['posts'] }); 
+        });
+});
+
+// (Tùy chọn) Hủy lắng nghe khi rời trang để tránh lỗi
+onUnmounted(() => {
+    const userId = usePage().props.auth.user.id;
+    Echo.leave(`App.Models.User.${userId}`);
+});
 </script>
 
 <template>
