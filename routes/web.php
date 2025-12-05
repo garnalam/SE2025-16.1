@@ -261,6 +261,18 @@ Route::middleware([
             ],
         ]);
     })->name('teams.show');
+    Route::get('/notifications', function (Request $request) {
+        return $request->user()->notifications()->take(10)->get();
+    })->name('notifications.index');
+
+    // API đánh dấu đã đọc
+    Route::post('/notifications/{id}/read', function (Request $request, $id) {
+        $notification = $request->user()->notifications()->where('id', $id)->first();
+        if ($notification) {
+            $notification->markAsRead();
+        }
+        return response()->json(['success' => true]);
+    });
 });
 
 // ===== ROUTES NỘP BÀI (SUBMISSIONS) =====

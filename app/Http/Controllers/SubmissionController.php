@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage; // Thêm dòng này
-
+use App\Notifications\SubmissionGradedNotification; // <--- THÊM DÒNG NÀY
+use App\Notifications\LateSubmissionNotification;
+use Carbon\Carbon; 
 class SubmissionController extends Controller
 {
     /**
@@ -55,6 +57,25 @@ class SubmissionController extends Controller
                     'file_path' => $path,
                     'original_name' => $file->getClientOriginalName(),
                 ]);
+            }
+        }
+        // 1. Chỉ kiểm tra nếu bài tập có cài đặt hạn nộp (due_date)
+        if ($post->due_date) {
+            
+            $submittedAt = Carbon::parse($submission->submitted_at);
+            $dueDate = Carbon::parse($post->due_date);
+
+            // 2. So sánh: Nếu Thời gian nộp LỚN HƠN (gt) Hạn chót -> LÀ MUỘN
+            if ($submittedAt->gt($dueDate)) {
+                
+                // Lấy giáo viên (người tạo bài tập)
+                $teacher = $post->user;
+
+                // Tránh trường hợp giáo viên tự test nộp bài cho chính mình
+                if ($teacher->id !== Auth::id()) {
+                    // Gửi thông báo "Nộp muộn"
+                    $teacher->notify(new LateSubmissionNotification($submission));
+                }
             }
         }
 
@@ -130,8 +151,8 @@ class SubmissionController extends Controller
             'feedback' => $request->input('feedback'),
             'graded_at' => now(),
         ]);
-
-        return back()->with('success', 'Chấm điểm thành công!');
+        // Gửi thông báo đến chính học sinh sở hữu bài nộp này
+$submission->user->notify(new \App\Notifications\SubmissionGradedNotification($submission));        return back()->with('success', 'Chấm điểm thành công!');
     }
     /**
  * Cho phép giáo viên download file bài nộp của học sinh.

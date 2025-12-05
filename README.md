@@ -70,6 +70,68 @@ DB_USERNAME=root     # <- User của MySQL (mặc định của XAMPP là 'root'
 
 DB_PASSWORD=        # <- Mật khẩu của MySQL (mặc định của XAMPP là rỗng)
 
+Truy cập pusher.com và đăng ký tài khoản (Sign Up) miễn phí.
+
+Sau khi đăng nhập, chọn Channels -> Bấm Create App.
+
+Điền thông tin:
+
+Name: Tên dự án (VD: LopHocTuongTac).
+
+Cluster: Chọn ap1 (Singapore) (Quan trọng: Chọn cái này cho gần Việt Nam và khớp cấu hình).
+
+Bấm Create App.
+
+Trong trang quản lý App vừa tạo, tìm menu bên trái chọn App Keys.
+
+Copy các thông số tại đây để điền vào file .env:
+
+app_id -> PUSHER_APP_ID
+
+key -> PUSHER_APP_KEY
+
+secret -> PUSHER_APP_SECRET
+
+cluster -> PUSHER_APP_CLUSTER (thường là ap1)
+
+copy đoạn cấu hình Pusher dưới đây dán vào cuối file .env của bạn:
+# --- CẤU HÌNH PUSHER (BẮT BUỘC PHẢI CÓ ĐỂ CHẠY REAL-TIME) ---
+BROADCAST_CONNECTION=pusher
+
+PUSHER_APP_ID= id của bạn
+PUSHER_APP_KEY=key của bạn
+PUSHER_APP_SECRET=mã secret của bạn
+PUSHER_HOST=
+PUSHER_PORT=443 (giữ nguyên)
+PUSHER_SCHEME=https (giữ nguyên)
+PUSHER_APP_CLUSTER=ap1 (giữ nguyên)
+
+# --- CẤU HÌNH VITE (FRONTEND) ---
+VITE_APP_NAME="${APP_NAME}"
+VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+VITE_PUSHER_HOST="${PUSHER_HOST}"
+VITE_PUSHER_PORT="${PUSHER_PORT}"
+VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
+VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+
+2. Sửa lỗi SSL trên máy cá nhân (BẮT BUỘC CHO WINDOWS)
+Vì chúng ta đang chạy trên Localhost (Windows), PHP sẽ chặn kết nối đến Pusher do không tin tưởng chứng chỉ bảo mật. Bạn cần làm bước này 1 lần duy nhất trên máy tính của bạn:
+
+Tải file cacert.pem tại đây: https://curl.se/ca/cacert.pem
+
+Lưu file vào ổ C, ví dụ: C:\cacert.pem.
+
+Mở file cấu hình php.ini (Gõ php --ini trong terminal để biết đường dẫn).
+
+Tìm và sửa dòng curl.cainfo thành:
+curl.cainfo = "C:\cacert.pem"
+openssl.cafile = "C:\cacert.pem"
+(Nhớ xóa dấu chấm phẩy ; ở đầu dòng nếu có).
+3. Chạy 3 terminal
+ - back : php artisan serve
+ - front : npm run dev
+ - Chạy Hàng đợi - Queue Worker : php artisan queue:work
+
 
 4. Cài đặt Gói Phụ thuộc
 
@@ -139,3 +201,4 @@ Database: MySQL
 Build Tool: Vite
 
 Styling: Tailwind CSS
+
