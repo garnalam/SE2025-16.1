@@ -60,22 +60,23 @@ class JetstreamServiceProvider extends ServiceProvider
     /**
      * Configure the roles and permissions that are available within the application.
      */
-    protected function configurePermissions(): void
-    {
-        Jetstream::defaultApiTokenPermissions(['read']);
+protected function configurePermissions(): void
+{
+    Jetstream::defaultApiTokenPermissions(['read']);
 
-        // Gợi ý: Bạn có thể đổi 'admin' thành 'teacher' (Giáo viên) cho dễ hiểu
-        Jetstream::role('admin', 'Giáo viên', [
-            'create',
-            'read',
-            'update',
-            'delete',
-        ])->description('Giáo viên có thể thực hiện mọi hành động trong lớp.');
+    // SỬA: Đổi 'admin' thành 'teacher' để khớp với bảng users
+    Jetstream::role('teacher', 'Giáo viên', [
+        'create',
+        'read',
+        'update',
+        'delete',
+        // Thêm các quyền khác nếu cần
+    ])->description('Giáo viên quản lý lớp học.');
 
-        // Gợi ý: Bạn có thể đổi 'editor' thành 'student' (Học sinh)
-        Jetstream::role('editor', 'Học sinh', [
-            'read',
-            'create', // Cho phép học sinh tạo bài (ví dụ: đăng câu hỏi trên diễn đàn)
-        ])->description('Học sinh có thể xem nội dung và tương tác.');
-    }
+    // SỬA: Đổi 'editor' thành 'student' để khớp với bảng users
+    Jetstream::role('student', 'Học sinh', [
+        'read',
+        // 'create', // Bật cái này nếu muốn học sinh đăng bài
+    ])->description('Học sinh tham gia lớp học.');
+}
 }
