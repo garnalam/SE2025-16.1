@@ -12,6 +12,9 @@ class QuizAttempt extends Model
 
     protected $casts = [
         'question_order' => 'array',
+        'proctoring_logs' => 'array', // <--- THÊM DÒNG NÀY
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function user() {
