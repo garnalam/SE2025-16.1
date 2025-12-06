@@ -85,6 +85,7 @@ class PostQuizController extends Controller
                 'quiz_mode' => $post->quiz_mode,
                 'shuffle' => $post->shuffle_questions,
                 'points' => $post->points_per_question,
+                'is_proctored' => !!$post->is_proctored, // <--- TRUYỀN XUỐNG VUE
                 'assignedUserIds' => $assignedUserIds,
                 'assign_mode' => $assignedUserIds->count() == $students->count() || $assignedUserIds->count() == 0 ? 'all' : 'specific',
             ],
@@ -150,7 +151,7 @@ class PostQuizController extends Controller
             'settings.count' => 'required|integer|min:1',
             'settings.shuffle' => 'required|boolean',
             'settings.points' => 'required|numeric|min:0.1',
-
+            'settings.is_proctored' => 'required|boolean', // <--- THÊM DÒNG NÀY
             'assignment' => 'required|array',
             'assignment.assign_mode' => 'required|in:all,specific',
             'assignment.assigned_users' => 'nullable|array',
@@ -189,6 +190,7 @@ class PostQuizController extends Controller
 
             // 4.1. Cập nhật bài Post với cài đặt mới
             $post->update([
+                'is_proctored' => $settings['is_proctored'], // <--- LƯU VÀO DB
                 'quiz_mode' => 'random',
                 'shuffle_questions' => $settings['shuffle'],
                 'points_per_question' => $settings['points'],
@@ -230,6 +232,7 @@ class PostQuizController extends Controller
 
         $data = $request->validate([
             'settings.shuffle' => 'required|boolean',
+            'settings.is_proctored' => 'required|boolean', // <--- THÊM DÒNG NÀY
             'assignment.assign_mode' => 'required|in:all,specific',
             'assignment.assigned_users' => 'nullable|array',
             'assignment.assigned_users.*' => 'integer|exists:users,id',
@@ -246,6 +249,7 @@ class PostQuizController extends Controller
                 'shuffle_questions' => $settings['shuffle'],
                 'random_quiz_settings' => null, // Xóa cài đặt ngẫu nhiên (nếu có)
                 // Chúng ta không cập nhật 'points' vì chế độ thủ công có thể có nhiều loại câu hỏi
+                'is_proctored' => $settings['is_proctored'], // <--- LƯU VÀO DB
             ]);
 
             // 2. Xử lý Giao bài (Assign)

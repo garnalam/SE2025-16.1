@@ -224,7 +224,8 @@ Route::get('/dashboard', function () {
     // 2. Routes để LƯU/XÓA "CẤU HÌNH MẪU" (Ý tưởng 1 của bạn)
     Route::resource('quiz-templates', QuizTemplateController::class)
          ->only(['store', 'destroy']);
-
+    Route::post('/quiz-attempts/{attempt}/log-violation', [QuizAttemptController::class, 'logViolation'])
+        ->name('quiz.log-violation');
     // 1. Nút "Bắt đầu làm bài"
     Route::post('/posts/{post}/quiz/start', [QuizAttemptController::class, 'start'])
          ->name('quiz.start');

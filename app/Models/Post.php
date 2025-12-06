@@ -24,6 +24,7 @@ class Post extends Model
         'topic_id',
         'post_type',
         'are_comments_enabled',
+        'is_proctored',
         
         // --- THÊM CÁC TRƯỜNG CHO ASSIGNMENT ---
         'title',

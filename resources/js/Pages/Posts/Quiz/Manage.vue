@@ -46,6 +46,7 @@ const generateForm = useForm({
         count: props.post.random_quiz_settings?.count || 10,
         shuffle: props.currentSettings.shuffle,
         points: props.currentSettings.points,
+        is_proctored: props.currentSettings.is_proctored || false,
     },
     assignment: {
         assign_mode: props.currentSettings.assign_mode,
@@ -57,6 +58,7 @@ const generateForm = useForm({
 const manualSettingsForm = useForm({
     settings: {
         shuffle: props.currentSettings.shuffle,
+        is_proctored: props.currentSettings.is_proctored || false,
     },
     assignment: {
         assign_mode: props.currentSettings.assign_mode,
@@ -111,6 +113,7 @@ watch(selectedTemplate, (newTemplate) => {
         const settings = newTemplate.settings;
         generateForm.settings.subject_id = props.subjects.find(s => s.id === settings.subject_id) || null;
         generateForm.settings.tags = props.tags.filter(t => settings.tags?.includes(t.id)) || [];
+        generateForm.settings.is_proctored = settings.is_proctored || false;
         generateForm.settings.count = settings.count;
         generateForm.settings.shuffle = settings.shuffle;
         generateForm.settings.points = settings.points;
@@ -288,7 +291,17 @@ const deleteTemplate = (id) => {
                                 <span class="ms-2 text-sm text-gray-600">Đảo thứ tự câu hỏi khi học sinh làm bài</span>
                             </label>
                         </div>
-
+                        <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+    <label class="flex items-center">
+        <Checkbox v-model:checked="manualSettingsForm.settings.is_proctored" />
+        <span class="ml-2 text-sm text-gray-800 font-bold">
+            🛡️ Bật chế độ GIÁM SÁT (Chống gian lận)
+        </span>
+    </label>
+    <p class="text-xs text-gray-600 ml-7 mt-1">
+        Yêu cầu học sinh bật Fullscreen. Nếu thoát ra hoặc chuyển tab quá 3 lần sẽ bị tự động nộp bài.
+    </p>
+</div>
                         <div class="p-6 bg-white shadow-xl sm:rounded-lg mt-6">
                             <h3 class="text-lg font-semibold mb-6">B. Giao bài</h3>
                             <div class="space-y-2 mb-4">
@@ -392,7 +405,17 @@ const deleteTemplate = (id) => {
                                 </label>
                             </div>
                         </div>
-
+                        <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+        <label class="flex items-center">
+            <Checkbox v-model:checked="generateForm.settings.is_proctored" />
+            <span class="ml-2 text-sm text-gray-800 font-bold">
+                🛡️ Bật chế độ GIÁM SÁT (Chống gian lận)
+            </span>
+        </label>
+        <p class="text-xs text-gray-600 ml-7 mt-1">
+            Yêu cầu học sinh bật Fullscreen. Nếu thoát ra hoặc chuyển tab quá 3 lần sẽ bị tự động nộp bài.
+        </p>
+    </div>
                         <div class="p-6 bg-white shadow-xl sm:rounded-lg mt-6">
                             <h3 class="text-lg font-semibold mb-6">B. Giao bài</h3>
                             
