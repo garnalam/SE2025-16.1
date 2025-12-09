@@ -196,7 +196,9 @@ Route::get('/dashboard', function () {
     Route::post('/questions/import', [QuestionImportController::class, 'store'])->name('questions.import.store');
     Route::get('/questions/import/template', [QuestionImportController::class, 'downloadTemplate'])->name('questions.import.template');
 
-
+    // [THÊM MỚI] Route xử lý AI
+    Route::post('/questions/generate-ai', [QuestionController::class, 'generateAiQuestions'])->name('questions.generate-ai');
+    Route::post('/questions/store-bulk', [QuestionController::class, 'storeBulk'])->name('questions.store-bulk');
     // ===== ROUTES NGÂN HÀNG CÂU HỎI (Questions) - THÊM MỚI =====
     Route::resource('questions', QuestionController::class);
     // =========================================================
