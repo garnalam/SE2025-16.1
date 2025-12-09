@@ -5,14 +5,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException; // <-- Quan trọng
+use Illuminate\Validation\ValidationException;
 use App\Notifications\NewCommentNotification;
-use Illuminate\Support\Facades\Auth;
 use App\Notifications\ReplyCommentNotification;
-use App\Models\Comment; // Nếu cần tìm comment cha
+use App\Models\Comment;
+use App\Services\GamificationService; // Import Service
+
 class CommentController extends Controller
 {
+    protected $gamification;
+
+    // Inject GamificationService vào Constructor
+    public function __construct(GamificationService $gamification)
+    {
+        $this->gamification = $gamification;
+    }
+
     /**
      * Lưu một bình luận (hoặc trả lời) mới.
      */
@@ -47,7 +55,7 @@ class CommentController extends Controller
             'parent_id' => ['nullable', 'exists:comments,id'],
         ]);
 
-        // 4. TẠO BÌNH LUẬN (Gán vào biến $comment)
+        // 4. TẠO BÌNH LUẬN
         $comment = $post->comments()->create([
             'user_id' => $request->user()->id,
             'body' => $validated['body'],
@@ -55,37 +63,37 @@ class CommentController extends Controller
         ]);
 
         // =========================================================
-        // 5. XỬ LÝ THÔNG BÁO (NOTIFICATION)
+        // [MỚI] GAMIFICATION LOGIC (CHUẨN CODE-FIRST)
+        // =========================================================
+        if ($request->user()->role === 'student') {
+            
+            // 1. Cộng 10 XP
+            $this->gamification->addXp($request->user(), 10);
+
+            // 2. Tự động kiểm tra tất cả huy hiệu
+            // Hàm này sẽ chạy qua danh sách Badge Classes (FirstCommentBadge, ChattyBadge...)
+            // Bạn không cần viết if/else thủ công ở đây nữa.
+            $this->gamification->checkBadges($request->user(), $comment);
+        }
+        // =========================================================
+
+        // =========================================================
+        // 5. XỬ LÝ THÔNG BÁO (NOTIFICATION - Cho tác giả bài viết)
         // =========================================================
         
         $currentUser = $request->user();
 
-        // -----------------------------------------------------
-        // A. Thông báo cho CHỦ BÀI VIẾT (NewCommentNotification)
-        // -----------------------------------------------------
+        // A. Thông báo cho CHỦ BÀI VIẾT
         $postOwner = $post->user;
-
-        // Chỉ gửi nếu người comment KHÔNG PHẢI là chủ bài viết
         if ($postOwner->id !== $currentUser->id) {
             $postOwner->notify(new NewCommentNotification($comment));
         }
 
-        // -----------------------------------------------------
-        // B. Thông báo cho NGƯỜI ĐƯỢC TRẢ LỜI (ReplyCommentNotification)
-        // -----------------------------------------------------
+        // B. Thông báo cho NGƯỜI ĐƯỢC TRẢ LỜI
         if ($comment->parent_id) {
-            // Tìm comment cha để lấy người sở hữu
             $parentComment = Comment::find($comment->parent_id);
-
             if ($parentComment) {
                 $parentOwner = $parentComment->user;
-
-                // Điều kiện gửi thông báo trả lời:
-                // 1. Không tự trả lời chính mình ($parentOwner->id !== $currentUser->id)
-                // 2. (Tùy chọn) Nếu người được trả lời ($parentOwner) chính là chủ bài viết ($postOwner), 
-                //    họ đã nhận thông báo A ở trên rồi. Tuy nhiên, thông báo "Trả lời" chi tiết hơn,
-                //    nên ta vẫn gửi cả 2 hoặc chặn bớt tùy bạn. Ở đây tôi để code gửi cả 2 cho chắc.
-                
                 if ($parentOwner->id !== $currentUser->id) {
                     $parentOwner->notify(new ReplyCommentNotification($comment));
                 }
