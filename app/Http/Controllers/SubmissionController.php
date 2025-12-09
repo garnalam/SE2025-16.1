@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage; // Thêm dòng này
 use App\Notifications\SubmissionGradedNotification; // <--- THÊM DÒNG NÀY
 use App\Notifications\LateSubmissionNotification;
 use Carbon\Carbon; 
+use App\Jobs\GradeSubmissionWithAI;
 class SubmissionController extends Controller
 {
     /**
@@ -93,6 +94,10 @@ class SubmissionController extends Controller
         // Giả sử quan hệ: Post -> Topic -> Team (Lớp học)
         // Bạn cần kiểm tra lại quan hệ này có đúng với cấu trúc của bạn không
         $team = $post->topic->team; 
+
+        if (Gate::denies('update', $team)) {
+        abort(403, 'Bạn không có quyền truy cập trang quản lý bài nộp.');
+        }
 
         // $students = $team->users()
         //        ->wherePivot('role', 'editor') 
@@ -181,4 +186,27 @@ public function downloadFile(Request $request, SubmissionFile $submission_file)
         $submission_file->original_name
     );
 }
+/**
+     * Kích hoạt AI chấm bài.
+     */
+    public function requestAiGrading(Request $request, Submission $submission)
+    {
+        // 1. Kiểm tra quyền (Giáo viên của lớp mới được chấm)
+        $team = $submission->post->topic->team;
+        if (Gate::denies('update', $team)) {
+            abort(403);
+        }
+
+        // 2. Kiểm tra nội dung
+        // Nếu không có content text và cũng không có file -> Không chấm được
+        if (!$submission->content && $submission->files->count() === 0) {
+            return back()->with('error', 'Bài làm trống, AI không thể phân tích.');
+        }
+
+        // 3. Đẩy Job vào hàng đợi (Queue)
+        // Lưu ý: Đảm bảo bạn đã import Job ở đầu file: use App\Jobs\GradeSubmissionWithAI;
+        GradeSubmissionWithAI::dispatch($submission);
+
+        return back()->with('success', 'Đã gửi yêu cầu cho AI. Vui lòng đợi khoảng 10-20 giây rồi tải lại trang.');
+    }
 }

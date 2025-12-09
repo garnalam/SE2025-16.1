@@ -118,4 +118,5 @@ class Post extends Model
     public function assignedUsers() {
         return $this->belongsToMany(User::class, 'post_user');
     }
+    
 }

@@ -24,31 +24,28 @@ class SubmissionGradedNotification extends Notification implements ShouldQueue
         return ['database', 'broadcast'];
     }
 
-    public function toArray($notifiable)
-    {
-        // 1. Lấy tên lớp học an toàn (Dùng dấu ?-> để tránh lỗi nếu không tìm thấy lớp)
-        // Logic: Submission -> Post -> Topic -> Team -> Name
-        $teamName = $this->submission->post?->topic?->team?->name ?? 'Lớp học';
+public function toArray($notifiable)
+{
+    $teamName = $this->submission->post?->topic?->team?->name ?? 'Lớp học';
+    $postTitle = $this->submission->post?->title ?? 'Bài tập';
 
-        // 2. Xác định tiêu đề bài tập
-        $postTitle = $this->submission->post?->title ?? 'Bài tập';
-
-        return [
-            'submission_id' => $this->submission->id,
-            'type' => 'grade_returned',
-            'team_name' => $teamName,
-            
-            // Dữ liệu hiển thị
-            'title' => 'Đã có điểm số',
-            'message' => "[$teamName] Giáo viên đã chấm bài: " . $postTitle,
-            
-            // Đường dẫn: Bạn cần kiểm tra xem route này có tồn tại trong web.php không
-            // Nếu lỗi route, hãy thay tạm bằng '#'
-            'url' => route('submissions.index', $this->submission->post_id), 
-            'grade' => $this->submission->grade,
-            'user_avatar' => null, // Hoặc $this->submission->post->user->profile_photo_url nếu muốn
-        ];
-    }
+    return [
+        'submission_id' => $this->submission->id,
+        'type' => 'grade_returned',
+        'team_name' => $teamName,
+        'title' => 'Đã có điểm số',
+        'message' => "[$teamName] Giáo viên đã chấm bài: " . $postTitle,
+        
+        // 👇 SỬA DÒNG NÀY: Dẫn về trang Topic (Feed) và cuộn tới bài đăng đó
+        'url' => route('topics.show', [
+            'topic' => $this->submission->post->topic_id, 
+            '#post-' . $this->submission->post_id 
+        ], absolute: false), 
+        
+        'grade' => $this->submission->grade,
+        'user_avatar' => null, 
+    ];
+}
 
     public function toBroadcast($notifiable)
     {

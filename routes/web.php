@@ -307,6 +307,8 @@ Route::get('/dashboard', function () {
 // ===== ROUTES NỘP BÀI (SUBMISSIONS) =====
 // (Nằm ngoài group 'verified' để có thể truy cập, nhưng vẫn cần 'auth')
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/submissions/{submission}/ai-grade', [SubmissionController::class, 'requestAiGrading'])
+        ->name('submissions.ai-grade');
     Route::post('/posts/{post}/submit', [SubmissionController::class, 'store'])
         ->name('submissions.store');
     Route::get('/analytics/class/{team}', [AnalyticsController::class, 'show'])

@@ -9,7 +9,6 @@ class Submission extends Model
 {
     use HasFactory;
 
-    // Đảm bảo $fillable có đủ các cột này
     protected $fillable = [
         'post_id',
         'user_id',
@@ -18,11 +17,15 @@ class Submission extends Model
         'feedback',
         'submitted_at',
         'graded_at',
+        // 👇 BỔ SUNG 2 CỘT NÀY ĐỂ LƯU KẾT QUẢ TỪ AI
+        'ai_suggested_grade',
+        'ai_suggested_feedback',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
         'graded_at' => 'datetime',
+        // 'ai_suggested_grade' => 'float', // Có thể thêm nếu muốn ép kiểu
     ];
 
     // Bài nộp này thuộc về 1 bài post (bài tập)
@@ -38,6 +41,7 @@ class Submission extends Model
     }
 
     // Bài nộp này có nhiều file
+    // ✅ Tên hàm này là 'files', nên trong Job bắt buộc phải dùng $submission->files
     public function files()
     {
         return $this->hasMany(SubmissionFile::class);

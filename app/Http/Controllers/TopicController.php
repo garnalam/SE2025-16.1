@@ -76,76 +76,80 @@ class TopicController extends Controller
     /**
      * Hiển thị một chủ đề cụ thể và các bài đăng bên trong nó.
      */
-    public function show(Request $request, Topic $topic)
-    {
-        $team = $topic->team;
-        if (Gate::denies('view', $team)) {
-            abort(403);
-        }
-
-        // 3. LOGIC TẢI DỮ LIỆU (Giữ nguyên của bạn)
-        $topic->load(['posts' => function ($query) {
-            $query->with([
-                'user', // Tải người đăng
-                'pollOptions.votes', // Tải poll
-                'parentComments.user', // Tải bình luận gốc + người đăng
-                'parentComments.replies.user', // Tải replies + người trả lời
-                'attachments' // Tải file đính kèm
-            ])->latest(); // Sắp xếp bài đăng mới nhất lên đầu
-        }]);
-
-        
-        // Lấy $posts từ topic đã load
-        $posts = $topic->posts;
-
-        // Xác định quyền (dùng lại logic của bạn)
-        $permissions = [
-            'canCreatePosts' => $request->user()->belongsToTeam($team),
-            'canManageTopics' => Gate::check('update', $topic),
-        ];
-
-        // Lấy bài nộp của học sinh (Giữ nguyên của bạn)
-        $userSubmissions = collect(); 
-        $userQuizAttempts = collect();
-        if (!$permissions['canManageTopics']) {
-            $userQuizAttempts = QuizAttempt::where('user_id', Auth::id())
-                                ->whereIn('post_id', $posts->pluck('id'))
-                                ->whereNotNull('completed_at') // Chỉ lấy bài đã nộp
-                                ->get()
-                                ->keyBy('post_id'); 
-        }
-        
-        // === THÊM MỚI: GÁN QUYỀN SỬA/XÓA CHO TỪNG BÀI POST ===
-        // (Đây là phần bị thiếu khiến nút Sửa/Xóa bị lỗi)
-        $postsWithPermissions = $posts->map(function ($post) use ($request) {
-            // Chuyển đổi post thành mảng để thêm key mới
-            $postArray = $post->toArray(); 
-            
-            // Thêm key 'can' (quyền)
-            $postArray['can'] = [
-                'update' => $request->user()->can('update', $post),
-                'delete' => $request->user()->can('delete', $post),
-            ];
-            
-            // Thêm key 'created_at_formatted' (định dạng thời gian)
-            $postArray['created_at_formatted'] = $post->created_at->diffForHumans();
-
-            return $postArray;
-        });
-        // === KẾT THÚC PHẦN THÊM MỚI ===
-
-
-        // 4. Trả về trang Vue (ĐÃ CẬP NHẬT)
-        return Inertia::render('Topics/Show', [
-            'team' => $team,
-            'topic' => $topic,
-            'posts' => $postsWithPermissions, // <-- SỬ DỤNG $postsWithPermissions
-            'authUserId' => Auth::id(),
-            'permissions' => $permissions, 
-            'userSubmissions' => $userSubmissions, 
-            'userQuizAttempts' => $userQuizAttempts,
-        ]);
+public function show(Request $request, Topic $topic)
+{
+    $team = $topic->team;
+    if (Gate::denies('view', $team)) {
+        abort(403);
     }
+
+    // 1. Tải bài đăng và các quan hệ
+    $topic->load(['posts' => function ($query) {
+        $query->with([
+            'user', 
+            'pollOptions.votes', 
+            'parentComments.user', 
+            'parentComments.replies.user', 
+            'attachments'
+        ])->latest();
+    }]);
+
+    $posts = $topic->posts;
+
+    // 2. Xác định quyền
+    $permissions = [
+        'canCreatePosts' => $request->user()->belongsToTeam($team),
+        'canManageTopics' => Gate::check('update', $topic),
+    ];
+
+    // 3. Lấy dữ liệu bài nộp của học sinh (SỬA Ở ĐÂY)
+    $userSubmissions = collect(); 
+    $userQuizAttempts = collect();
+
+    // Chỉ lấy nếu không phải là giáo viên quản lý (tức là học sinh)
+    // Hoặc bỏ check này nếu muốn giáo viên cũng thấy bài test của mình
+    if (Auth::check()) { 
+        
+        // Lấy Assignment Submissions (Key by post_id)
+        // 👇 ĐOẠN CODE NÀY QUAN TRỌNG ĐỂ HIỆN ĐIỂM
+        $userSubmissions = Submission::whereIn('post_id', $posts->pluck('id'))
+            ->where('user_id', Auth::id())
+            ->with('files') // Load file đính kèm để hiển thị lại
+            ->get()
+            ->keyBy('post_id');
+
+        // Lấy Quiz Attempts (Key by post_id)
+        $userQuizAttempts = QuizAttempt::whereIn('post_id', $posts->pluck('id'))
+            ->where('user_id', Auth::id())
+            ->whereNotNull('completed_at')
+            ->get()
+            ->keyBy('post_id');
+    }
+    
+    // 4. Gán quyền cho từng Post (Giữ nguyên logic của bạn)
+    $postsWithPermissions = $posts->map(function ($post) use ($request) {
+        $postArray = $post->toArray(); 
+        $postArray['can'] = [
+            'update' => $request->user()->can('update', $post),
+            'delete' => $request->user()->can('delete', $post),
+        ];
+        $postArray['created_at_formatted'] = $post->created_at->diffForHumans();
+        return $postArray;
+    });
+
+    // 5. Trả về View
+    return Inertia::render('Topics/Show', [
+        'team' => $team,
+        'topic' => $topic,
+        'posts' => $postsWithPermissions,
+        'authUserId' => Auth::id(),
+        'permissions' => $permissions, 
+        
+        // Truyền xuống Vue
+        'userSubmissions' => $userSubmissions, 
+        'userQuizAttempts' => $userQuizAttempts,
+    ]);
+}
 
     /**
      * Khóa hoặc mở khóa một chủ đề.
