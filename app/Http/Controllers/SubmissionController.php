@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\SubmissionFile;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Post;
@@ -8,13 +9,23 @@ use App\Models\Submission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Storage; // Thêm dòng này
-use App\Notifications\SubmissionGradedNotification; // <--- THÊM DÒNG NÀY
+use Illuminate\Support\Facades\Storage;
+use App\Notifications\SubmissionGradedNotification;
 use App\Notifications\LateSubmissionNotification;
 use Carbon\Carbon; 
 use App\Jobs\GradeSubmissionWithAI;
+use App\Services\GamificationService; // <--- [MỚI] Import Service
+
 class SubmissionController extends Controller
 {
+    protected $gamification; // <--- [MỚI] Khai báo biến
+
+    // <--- [MỚI] Inject GamificationService vào Constructor
+    public function __construct(GamificationService $gamification)
+    {
+        $this->gamification = $gamification;
+    }
+
     /**
      * Học sinh nộp bài.
      */
@@ -60,6 +71,10 @@ class SubmissionController extends Controller
                 ]);
             }
         }
+
+        // --- KIỂM TRA HẠN NỘP VÀ CỘNG ĐIỂM ---
+        $isLate = false;
+
         // 1. Chỉ kiểm tra nếu bài tập có cài đặt hạn nộp (due_date)
         if ($post->due_date) {
             
@@ -68,7 +83,8 @@ class SubmissionController extends Controller
 
             // 2. So sánh: Nếu Thời gian nộp LỚN HƠN (gt) Hạn chót -> LÀ MUỘN
             if ($submittedAt->gt($dueDate)) {
-                
+                $isLate = true; // Đánh dấu là nộp muộn
+
                 // Lấy giáo viên (người tạo bài tập)
                 $teacher = $post->user;
 
@@ -80,6 +96,13 @@ class SubmissionController extends Controller
             }
         }
 
+        // [MỚI] GAMIFICATION: CỘNG ĐIỂM NẾU NỘP ĐÚNG HẠN
+        if (!$isLate && Auth::user()->role === 'student') {
+            // Cộng 50 XP cho việc nộp bài đúng hạn
+            $this->gamification->addXp(Auth::user(), 50);
+        }
+        // -----------------------------------------------
+
         return back()->with('success', 'Nộp bài thành công!');
     }
 
@@ -88,20 +111,13 @@ class SubmissionController extends Controller
      */
     public function index(Post $post)
     {
-        // TODO: Cần Policy để bảo mật, đảm bảo chỉ giáo viên của lớp mới được xem
-        // $this->authorize('viewSubmissions', $post);
-
         // Giả sử quan hệ: Post -> Topic -> Team (Lớp học)
-        // Bạn cần kiểm tra lại quan hệ này có đúng với cấu trúc của bạn không
         $team = $post->topic->team; 
 
         if (Gate::denies('update', $team)) {
-        abort(403, 'Bạn không có quyền truy cập trang quản lý bài nộp.');
+            abort(403, 'Bạn không có quyền truy cập trang quản lý bài nộp.');
         }
 
-        // $students = $team->users()
-        //        ->wherePivot('role', 'editor') 
-        //        ->get();
         $students = $team->users()->get(); // Lấy TẤT CẢ user trong team
 
         // Lấy danh sách các bài đã nộp cho bài tập này
@@ -139,12 +155,12 @@ class SubmissionController extends Controller
     /**
      * Giáo viên chấm điểm.
      */
+/**
+     * Giáo viên chấm điểm.
+     */
     public function grade(Request $request, Submission $submission)
     {
-        // TODO: Cần Policy bảo mật
-        // $this->authorize('grade', $submission);
-
-        $maxPoints = $submission->post->max_points ?? 100; // Lấy điểm tối đa từ post
+        $maxPoints = $submission->post->max_points ?? 100;
 
         $request->validate([
             'grade' => "required|numeric|min:0|max:{$maxPoints}",
@@ -156,37 +172,54 @@ class SubmissionController extends Controller
             'feedback' => $request->input('feedback'),
             'graded_at' => now(),
         ]);
+
+        // =========================================================
+        // [MỚI] GAMIFICATION: Kiểm tra huy hiệu sau khi chấm điểm
+        // =========================================================
+        
+        // Chỉ kiểm tra nếu người được chấm là Học sinh
+        if ($submission->user->role === 'student') {
+            // Cộng XP cho việc "Được chấm điểm" (Khuyến khích) - Tùy chọn
+            // $this->gamification->addXp($submission->user, 20); 
+
+            // GỌI HÀM KIỂM TRA HUY HIỆU
+            // Hệ thống sẽ tự động chạy qua PerfectScoreBadge để check xem điểm có max không
+            $this->gamification->checkBadges($submission->user, $submission);
+        }
+        // =========================================================
+
         // Gửi thông báo đến chính học sinh sở hữu bài nộp này
-$submission->user->notify(new SubmissionGradedNotification($submission));        return back()->with('success', 'Chấm điểm thành công!');
+        $submission->user->notify(new SubmissionGradedNotification($submission));
+        
+        return back()->with('success', 'Chấm điểm thành công!');
     }
+
     /**
- * Cho phép giáo viên download file bài nộp của học sinh.
- */
-public function downloadFile(Request $request, SubmissionFile $submission_file)
-{
-    // 1. Lấy thông tin Lớp học (Team) từ file
-    // Quan hệ: SubmissionFile -> Submission -> Post -> Topic -> Team
-    $team = $submission_file->submission->post->topic->team;
+     * Cho phép giáo viên download file bài nộp của học sinh.
+     */
+    public function downloadFile(Request $request, SubmissionFile $submission_file)
+    {
+        // 1. Lấy thông tin Lớp học (Team) từ file
+        $team = $submission_file->submission->post->topic->team;
 
-    // 2. Phân quyền: Kiểm tra xem user có phải là Teacher/Admin của lớp này không
-    // Chúng ta dùng Gate 'updateTeam' của Jetstream
-    if (Gate::denies('update', $team)) {
-        // Nếu không phải giáo viên của lớp, từ chối truy cập
-        abort(403, 'Bạn không có quyền truy cập file này.');
+        // 2. Phân quyền: Kiểm tra xem user có phải là Teacher/Admin của lớp này không
+        if (Gate::denies('update', $team)) {
+            abort(403, 'Bạn không có quyền truy cập file này.');
+        }
+
+        // 3. Kiểm tra file có tồn tại không
+        if (!Storage::exists($submission_file->file_path)) {
+            abort(404, 'File không tồn tại.');
+        }
+
+        // 4. Trả về file cho user download (với tên file gốc)
+        return Storage::download(
+            $submission_file->file_path, 
+            $submission_file->original_name
+        );
     }
 
-    // 3. Kiểm tra file có tồn tại không
-    if (!Storage::exists($submission_file->file_path)) {
-        abort(404, 'File không tồn tại.');
-    }
-
-    // 4. Trả về file cho user download (với tên file gốc)
-    return Storage::download(
-        $submission_file->file_path, 
-        $submission_file->original_name
-    );
-}
-/**
+    /**
      * Kích hoạt AI chấm bài.
      */
     public function requestAiGrading(Request $request, Submission $submission)
@@ -198,13 +231,11 @@ public function downloadFile(Request $request, SubmissionFile $submission_file)
         }
 
         // 2. Kiểm tra nội dung
-        // Nếu không có content text và cũng không có file -> Không chấm được
         if (!$submission->content && $submission->files->count() === 0) {
             return back()->with('error', 'Bài làm trống, AI không thể phân tích.');
         }
 
         // 3. Đẩy Job vào hàng đợi (Queue)
-        // Lưu ý: Đảm bảo bạn đã import Job ở đầu file: use App\Jobs\GradeSubmissionWithAI;
         GradeSubmissionWithAI::dispatch($submission);
 
         return back()->with('success', 'Đã gửi yêu cầu cho AI. Vui lòng đợi khoảng 10-20 giây rồi tải lại trang.');

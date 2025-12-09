@@ -1,16 +1,10 @@
 <script setup>
-import { ref, watch,reactive } from 'vue';
+import { ref, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import VueMultiselect from 'vue-multiselect'; // <-- 1. Import thư viện
 import Pagination from '@/Components/Pagination.vue'; // (Giả sử bạn có component này)
-// Import thêm components của Jetstream để làm Modal đẹp
-import DialogModal from '@/Components/DialogModal.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import axios from 'axios'; // Dùng axios để gọi API AI mà không reload trang
+
 // 2. Nhận props mới từ controller
 const props = defineProps({
     questions: Object, // Đây là object phân trang
@@ -53,85 +47,6 @@ function resetFilters() {
         search: '',
     };
 }
-// ===== [NEW] LOGIC AI GENERATOR =====
-const showAiModal = ref(false);
-const aiStep = ref(1); // 1: Upload, 2: Review
-const isGenerating = ref(false);
-
-const aiForm = reactive({
-    documents: [], // Đổi từ null sang mảng rỗng
-    subject_id: null,
-    tags: [],
-    number_of_questions: 5,
-    custom_instructions: '', // <-- Trường mới
-});
-
-const generatedQuestions = ref([]); // Chứa danh sách câu hỏi AI trả về
-
-// Hàm xử lý chọn file
-const handleFileUpload = (event) => {
-    // Chuyển FileList thành Array
-    aiForm.documents = Array.from(event.target.files);
-};
-
-// Gửi file lên server để AI xử lý
-const generateQuestions = async () => {
-    if (aiForm.documents.length === 0 || !aiForm.subject_id) {
-        alert('Vui lòng chọn ít nhất 1 file và môn học!');
-        return;
-    }
-
-    isGenerating.value = true;
-    const formData = new FormData();
-    
-    // Duyệt mảng file và append từng cái vào formData
-    aiForm.documents.forEach((file, index) => {
-        formData.append(`documents[${index}]`, file);
-    });
-    
-    formData.append('number_of_questions', aiForm.number_of_questions);
-    formData.append('subject_id', aiForm.subject_id); // Gửi thêm cái này nếu cần validate backend chặt chẽ
-    
-    // Gửi yêu cầu riêng
-    if (aiForm.custom_instructions) {
-        formData.append('custom_instructions', aiForm.custom_instructions);
-    }
-
-    try {
-        const response = await axios.post(route('questions.generate-ai'), formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        generatedQuestions.value = response.data.questions;
-        aiStep.value = 2; 
-    } catch (error) {
-        console.error(error);
-        alert('Lỗi: ' + (error.response?.data?.error || 'Không thể tạo câu hỏi.'));
-    } finally {
-        isGenerating.value = false;
-    }
-};
-
-// Lưu câu hỏi sau khi duyệt
-const saveBulkForm = useForm({
-    questions: [],
-    subject_id: null,
-    tags: []
-});
-
-const saveGeneratedQuestions = () => {
-    saveBulkForm.questions = generatedQuestions.value;
-    saveBulkForm.subject_id = aiForm.subject_id;
-    saveBulkForm.tags = aiForm.tags.map(t => t.id); // Lấy ID của tags
-
-    saveBulkForm.post(route('questions.store-bulk'), {
-        onSuccess: () => {
-            showAiModal.value = false;
-            aiStep.value = 1;
-            generatedQuestions.value = [];
-            aiForm.document = null;
-        }
-    });
-};
 </script>
 
 <template>
@@ -145,140 +60,35 @@ const saveGeneratedQuestions = () => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="mb-4 flex flex-wrap gap-4 items-center">
-                    <Link :href="route('questions.create')" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
+                    <Link
+                        :href="route('questions.create')"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700"
+                    >
                         + Tạo câu hỏi mới
                     </Link>
-                    
-                    <button 
-                        @click="showAiModal = true"
-                        class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 animate-pulse"
+
+                    <Link
+                        :href="route('subjects.index')"
+                        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50"
                     >
-                        ✨ Tạo bằng AI (Gemini)
-                    </button>
-                    <Link :href="route('subjects.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">+ Quản lý Môn học</Link>
-                    <Link :href="route('tags.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">+ Quản lý Thẻ (Tags)</Link>
-                    <Link :href="route('questions.import.create')" class="inline-flex items-center px-4 py-2 bg-green-100 border border-green-300 rounded-md font-semibold text-xs text-green-700 uppercase tracking-widest shadow-sm hover:bg-green-200">+ Import từ File</Link>
+                        + Quản lý Môn học
+                    </Link>
+                    <Link
+                        :href="route('tags.index')"
+                        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50"
+                    >
+                        + Quản lý Thẻ (Tags)
+                    </Link>
+                    <Link
+                        :href="route('questions.import.create')"
+                        class="inline-flex items-center px-4 py-2 bg-green-100 border border-green-300 rounded-md font-semibold text-xs text-green-700 uppercase tracking-widest shadow-sm hover:bg-green-200"
+                    >
+                        + Import từ File
+                    </Link>
                 </div>
 
-                <DialogModal :show="showAiModal" @close="showAiModal = false" maxWidth="4xl">
-                    <template #title>
-                        <span class="text-purple-700">✨ Tạo câu hỏi tự động với Gemini AI</span>
-                    </template>
-
-                    <template #content>
-    <div v-if="aiStep === 1">
-        <div class="space-y-4">
-            <div>
-                <InputLabel value="1. Chọn Môn học (Bắt buộc)" />
-                <select v-model="aiForm.subject_id" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full mt-1">
-                    <option :value="null">-- Chọn môn --</option>
-                    <option v-for="sub in props.subjects" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
-                </select>
-            </div>
-
-            <div>
-                <InputLabel value="2. Gắn Thẻ (Tùy chọn)" />
-                <VueMultiselect
-                    v-model="aiForm.tags"
-                    :options="props.tags"
-                    track-by="id"
-                    label="name"
-                    :multiple="true"
-                    placeholder="Chọn thẻ"
-                    class="mt-1"
-                />
-            </div>
-
-            <div>
-                <InputLabel value="3. Tài liệu nguồn (Chọn nhiều file)" />
-                <input 
-                    type="file" 
-                    multiple @change="handleFileUpload" 
-                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" 
-                />
-                <p class="text-xs text-gray-500 mt-1">
-                    Hỗ trợ PDF, Word, TXT (Max 10MB). 
-                    <span v-if="aiForm.documents.length > 0" class="font-bold text-green-600">
-                        Đã chọn {{ aiForm.documents.length }} file.
-                    </span>
-                </p>
-            </div>
-            
-            <div>
-                <InputLabel value="4. Yêu cầu riêng cho AI (Tùy chọn)" />
-                <textarea 
-                    v-model="aiForm.custom_instructions" 
-                    class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 text-sm"
-                    rows="2"
-                    placeholder="Ví dụ: Chỉ lấy kiến thức chương 1, tạo câu hỏi khó, tránh hỏi về ngày tháng..."
-                ></textarea>
-            </div>
-
-            <div>
-                <InputLabel value="5. Số lượng câu hỏi muốn tạo" />
-                <input type="number" v-model="aiForm.number_of_questions" min="1" max="20" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-20 mt-1" />
-            </div>
-        </div>
-        
-        <div v-if="isGenerating" class="mt-6 text-center">
-            <svg class="animate-spin h-8 w-8 text-purple-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="text-gray-600 font-medium">
-                Gemini đang đọc {{ aiForm.documents.length }} tài liệu và suy nghĩ... (Có thể mất 10-20s)
-            </span>
-        </div>
-    </div>
-
-    <div v-else>
-        <div class="mb-4 bg-green-50 p-3 rounded-md border border-green-200 text-green-800">
-            ✅ AI đã tạo xong! Vui lòng kiểm tra kỹ nội dung trước khi lưu.
-        </div>
-        <div class="max-h-96 overflow-y-auto space-y-6 pr-2">
-            <div v-for="(q, index) in generatedQuestions" :key="index" class="border p-4 rounded-lg bg-gray-50 relative">
-                <button @click="generatedQuestions.splice(index, 1)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs font-bold">XÓA</button>
-                
-                <label class="block text-xs font-bold text-gray-700 mb-1">Câu hỏi {{ index + 1 }}:</label>
-                <textarea v-model="q.question_text" class="w-full border-gray-300 rounded-md shadow-sm text-sm" rows="2"></textarea>
-                
-                <div class="mt-2 space-y-2">
-                    <div v-for="(opt, optIndex) in q.options" :key="optIndex" class="flex items-center gap-2">
-                        <input type="radio" :name="'correct_' + index" :checked="opt.is_correct" @change="() => { q.options.forEach(o => o.is_correct = false); opt.is_correct = true; }" />
-                        <input type="text" v-model="opt.text" class="flex-1 border-gray-300 rounded-md shadow-sm text-xs py-1" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-                    <template #footer>
-                        <SecondaryButton @click="showAiModal = false" :disabled="isGenerating || saveBulkForm.processing">
-                            Hủy
-                        </SecondaryButton>
-
-                        <PrimaryButton 
-                            v-if="aiStep === 1" 
-                            class="ml-3 bg-purple-600 hover:bg-purple-700" 
-                            @click="generateQuestions"
-                            :disabled="isGenerating"
-                        >
-                            {{ isGenerating ? 'Đang xử lý...' : 'Tạo câu hỏi' }}
-                        </PrimaryButton>
-
-                        <PrimaryButton 
-                            v-if="aiStep === 2" 
-                            class="ml-3" 
-                            @click="saveGeneratedQuestions"
-                            :disabled="saveBulkForm.processing"
-                        >
-                            {{ saveBulkForm.processing ? 'Đang lưu...' : 'Lưu tất cả vào Ngân hàng' }}
-                        </PrimaryButton>
-                    </template>
-                </DialogModal>
                 <div class="bg-white p-4 shadow-md rounded-lg mb-6">
-                   <h3 class="text-lg font-semibold mb-3">Tìm & Lọc</h3>
+                    <h3 class="text-lg font-semibold mb-3">Tìm & Lọc</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Môn học</label>
