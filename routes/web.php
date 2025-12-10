@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Laravel\Jetstream\Jetstream;
 use Inertia\Inertia;
 use Carbon\Carbon;
-
+use App\Http\Controllers\AttendanceController;
 // --- Imports Controllers ---
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\QuestionController;
@@ -171,7 +171,20 @@ Route::middleware([
             ],
         ]);
     })->name('teams.feed');
+    // --- ROUTES ĐIỂM DANH QR ---
+    Route::post('/teams/{team}/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
+    Route::post('/attendance/{session}/refresh', [AttendanceController::class, 'refreshToken'])->name('attendance.refresh');
+    Route::post('/attendance/{session}/close', [AttendanceController::class, 'close'])->name('attendance.close');
 
+    // Route xử lý học sinh tham gia
+    Route::get('/attendance/{session}/{token}', [AttendanceController::class, 'joinByQr'])->name('attendance.join');
+    Route::post('/attendance/join-code', [AttendanceController::class, 'joinByCode'])->name('attendance.join-code');
+
+    // Thêm vào dưới route attendance.history
+Route::post('/attendance/toggle', [AttendanceController::class, 'toggle'])->name('attendance.toggle');
+
+    // Route xem lịch sử
+    Route::get('/teams/{team}/attendance-history', [AttendanceController::class, 'history'])->name('attendance.history');
     // Cài đặt lớp học (Jetstream)
     Route::get('/teams/{team}', function (Team $team) {
         if (Gate::denies('view', $team)) {
@@ -214,6 +227,7 @@ Route::middleware([
     Route::post('/questions/import', [QuestionImportController::class, 'store'])->name('questions.import.store');
     Route::get('/questions/import/template', [QuestionImportController::class, 'downloadTemplate'])->name('questions.import.template');
     Route::resource('questions', QuestionController::class);
+
         // [THÊM MỚI] Route xử lý AI
     Route::post('/questions/generate-ai', [QuestionController::class, 'generateAiQuestions'])->name('questions.generate-ai');
     Route::post('/questions/store-bulk', [QuestionController::class, 'storeBulk'])->name('questions.store-bulk');
