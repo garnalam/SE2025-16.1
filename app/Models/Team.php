@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <--- 1. THÊM DÒNG NÀY
 use Laravel\Jetstream\Jetstream; // <--- 2. THÊM DÒNG NÀY
-
+use App\Models\AttendanceSession;
 class Team extends JetstreamTeam
 {
     use HasFactory;
@@ -98,4 +98,9 @@ class Team extends JetstreamTeam
     {
         return $this->hasMany(Topic::class);
     }
+
+    public function attendanceSessions()
+{
+    return $this->hasMany(AttendanceSession::class);
+}
 }

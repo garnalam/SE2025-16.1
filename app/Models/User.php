@@ -12,7 +12,7 @@ use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <-- [QUAN TRỌNG] THÊM DÒNG NÀY
-
+use App\Models\AttendanceRecord;
 class User extends Authenticatable
 {
     use HasApiTokens;
@@ -153,4 +153,9 @@ class User extends Authenticatable
         
         return round(($this->xp / $target) * 100);
     }
+
+    public function attendanceRecords()
+{
+    return $this->hasMany(AttendanceRecord::class);
+}
 }
