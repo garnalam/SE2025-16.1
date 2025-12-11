@@ -66,8 +66,9 @@ class FortifyServiceProvider extends ServiceProvider
                     }
 
                     if ($role === 'student') {
-                        // Học sinh: Về dashboard của học sinh (không có team)
-                        return redirect()->intended(route('student.dashboard')); // /student-dashboard
+                        // === SỬA LỖI ===
+                        // Học sinh: Về dashboard (web.php sẽ tự điều hướng đúng)
+                        return redirect()->intended(route('dashboard'));
                     }
 
                     // Fallback (dự phòng)
@@ -91,8 +92,10 @@ class FortifyServiceProvider extends ServiceProvider
                     }
 
                     if ($role === 'student') {
-                        // Học sinh: Về dashboard của học sinh
-                        return redirect(route('student.dashboard'));
+                        // === SỬA LỖI ===
+                        // Học sinh: Về dashboard (web.php sẽ tự điều hướng đúng)
+                        // (config('fortify.home') thường là 'dashboard')
+                        return redirect(config('fortify.home'));
                     }
 
                     // Fallback (dự phòng)
@@ -104,3 +107,4 @@ class FortifyServiceProvider extends ServiceProvider
         // --- KẾT THÚC CODE THÊM MỚI ---
     }
 }
+

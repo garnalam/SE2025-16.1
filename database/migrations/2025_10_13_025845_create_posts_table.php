@@ -12,12 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('posts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('team_id')->constrained()->cascadeOnDelete(); // Quan trọng: Bài đăng này thuộc về Lớp học nào
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // Quan trọng: Bài đăng này do ai tạo
-            $table->text('content'); // Nội dung bài đăng
-            $table->timestamps(); // Tự động tạo cột created_at và updated_at
-        });
+    $table->id();
+    $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // Người đăng (giáo viên)
+    $table->foreignId('team_id')->constrained()->cascadeOnDelete(); // Lớp học
+    $table->foreignId('topic_id')->constrained()->cascadeOnDelete(); // Chủ đề (bạn đã có)
+
+    // Dữ liệu chung
+    $table->string('post_type'); // text, poll, material, assignment
+    $table->text('content');     // Nội dung, câu hỏi poll, mô tả bài tập...
+
+    // Dành riêng cho Assignment
+    $table->string('title')->nullable();      // Tiêu đề bài tập
+    $table->timestamp('due_date')->nullable(); // Ngày hết hạn
+    $table->unsignedInteger('max_points')->nullable(); // Điểm tối đa
+
+    $table->timestamps();
+});
     }
 
     /**
