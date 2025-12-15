@@ -162,7 +162,7 @@ class PostController extends Controller
         }
         
         // 8. Quay lại
-        return back(303)->with('success', 'Đã đăng bài thành công!');
+        // return back(303)->with('success', 'Đã đăng bài thành công!');
     }
 
     /**

@@ -4,10 +4,10 @@ import CreateTeamForm from '@/Pages/Teams/Partials/CreateTeamForm.vue';
 </script>
 
 <template>
-    <AppLayout title="Create Team">
+    <AppLayout title="Initialize Class">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Create Team
+            <h2 class="font-black text-xl text-white leading-tight font-exo uppercase tracking-wide">
+                Initialize New Class Module
             </h2>
         </template>
 

@@ -21,23 +21,23 @@ const createTeam = () => {
 <template>
     <FormSection @submitted="createTeam">
         <template #title>
-            Team Details
+            <span class="text-white font-exo uppercase tracking-wide">Mô tả lớp học</span>
         </template>
 
         <template #description>
-            Create a new team to collaborate with others on projects.
+            <span class="text-slate-400">Thêm thông tin cho lớp học của bạn</span>
         </template>
 
         <template #form>
             <div class="col-span-6">
-                <InputLabel value="Team Owner" />
+                <InputLabel value="Người sáng lập" />
 
-                <div class="flex items-center mt-2">
-                    <img class="object-cover size-12 rounded-full" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
+                <div class="flex items-center mt-2 p-3 rounded-xl bg-slate-800/50 border border-white/5">
+                    <img class="object-cover size-12 rounded-lg border border-indigo-500/30" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
 
                     <div class="ms-4 leading-tight">
-                        <div class="text-gray-900">{{ $page.props.auth.user.name }}</div>
-                        <div class="text-sm text-gray-700">
+                        <div class="text-white font-bold font-exo">{{ $page.props.auth.user.name }}</div>
+                        <div class="text-sm text-slate-400 font-mono">
                             {{ $page.props.auth.user.email }}
                         </div>
                     </div>
@@ -45,12 +45,13 @@ const createTeam = () => {
             </div>
 
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Team Name" />
+                <InputLabel for="name" value="Tên lớp học" />
                 <TextInput
                     id="name"
                     v-model="form.name"
                     type="text"
-                    class="block w-full mt-1"
+                    class="block w-full mt-1 bg-slate-900 border-slate-700 text-white placeholder-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    placeholder="ví dụ : Lớp Toán 10A1"
                     autofocus
                 />
                 <InputError :message="form.errors.name" class="mt-2" />
@@ -59,7 +60,7 @@ const createTeam = () => {
 
         <template #actions>
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Create
+                Tạo lớp học
             </PrimaryButton>
         </template>
     </FormSection>

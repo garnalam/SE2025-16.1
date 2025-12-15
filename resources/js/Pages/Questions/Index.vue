@@ -1,42 +1,38 @@
 <script setup>
-import { ref, watch,reactive } from 'vue';
+import { ref, watch, reactive } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
-import VueMultiselect from 'vue-multiselect'; // <-- 1. Import thư viện
-import Pagination from '@/Components/Pagination.vue'; // (Giả sử bạn có component này)
-// Import thêm components của Jetstream để làm Modal đẹp
+import VueMultiselect from 'vue-multiselect'; 
+import Pagination from '@/Components/Pagination.vue'; 
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import axios from 'axios'; // Dùng axios để gọi API AI mà không reload trang
-// 2. Nhận props mới từ controller
+import axios from 'axios'; 
+
 const props = defineProps({
-    questions: Object, // Đây là object phân trang
+    questions: Object,
     subjects: Array,
     tags: Array,
-    filters: Object, // Các filter đã áp dụng
+    filters: Object,
 });
 
-// Form helper để xóa (Như cũ)
 const deleteForm = useForm({});
 function deleteQuestion(questionId) {
-    if (confirm('Bạn có chắc muốn xóa câu hỏi này?')) {
+    if (confirm('Xác nhận xóa bài viết: Bạn đã chắc chắn chưa ?')) {
         deleteForm.delete(route('questions.destroy', questionId), {
             preserveScroll: true,
         });
     }
 }
 
-// 3. Form cho Bộ lọc
 const filterForm = ref({
     subject: props.filters.subject || null,
     tags: props.filters.tags || [],
     search: props.filters.search || '',
 });
 
-// 4. Hàm watch để tự động lọc khi form thay đổi
 watch(filterForm, (newFilters) => {
     router.get(route('questions.index'), newFilters, {
         preserveState: true,
@@ -45,54 +41,42 @@ watch(filterForm, (newFilters) => {
     });
 }, { deep: true });
 
-// 5. Hàm reset bộ lọc
 function resetFilters() {
-    filterForm.value = {
-        subject: null,
-        tags: [],
-        search: '',
-    };
+    filterForm.value = { subject: null, tags: [], search: '' };
 }
-// ===== [NEW] LOGIC AI GENERATOR =====
+
+// ===== LOGIC AI GENERATOR =====
 const showAiModal = ref(false);
-const aiStep = ref(1); // 1: Upload, 2: Review
+const aiStep = ref(1); 
 const isGenerating = ref(false);
 
 const aiForm = reactive({
-    documents: [], // Đổi từ null sang mảng rỗng
+    documents: [], 
     subject_id: null,
     tags: [],
     number_of_questions: 5,
-    custom_instructions: '', // <-- Trường mới
+    custom_instructions: '', 
 });
 
-const generatedQuestions = ref([]); // Chứa danh sách câu hỏi AI trả về
+const generatedQuestions = ref([]); 
 
-// Hàm xử lý chọn file
 const handleFileUpload = (event) => {
-    // Chuyển FileList thành Array
     aiForm.documents = Array.from(event.target.files);
 };
 
-// Gửi file lên server để AI xử lý
 const generateQuestions = async () => {
     if (aiForm.documents.length === 0 || !aiForm.subject_id) {
-        alert('Vui lòng chọn ít nhất 1 file và môn học!');
+        alert('Missing critical data: Subject and Source Files required.');
         return;
     }
 
     isGenerating.value = true;
     const formData = new FormData();
-    
-    // Duyệt mảng file và append từng cái vào formData
     aiForm.documents.forEach((file, index) => {
         formData.append(`documents[${index}]`, file);
     });
-    
     formData.append('number_of_questions', aiForm.number_of_questions);
-    formData.append('subject_id', aiForm.subject_id); // Gửi thêm cái này nếu cần validate backend chặt chẽ
-    
-    // Gửi yêu cầu riêng
+    formData.append('subject_id', aiForm.subject_id); 
     if (aiForm.custom_instructions) {
         formData.append('custom_instructions', aiForm.custom_instructions);
     }
@@ -105,13 +89,12 @@ const generateQuestions = async () => {
         aiStep.value = 2; 
     } catch (error) {
         console.error(error);
-        alert('Lỗi: ' + (error.response?.data?.error || 'Không thể tạo câu hỏi.'));
+        alert('System Error: ' + (error.response?.data?.error || 'AI Generation Failed.'));
     } finally {
         isGenerating.value = false;
     }
 };
 
-// Lưu câu hỏi sau khi duyệt
 const saveBulkForm = useForm({
     questions: [],
     subject_id: null,
@@ -121,256 +104,337 @@ const saveBulkForm = useForm({
 const saveGeneratedQuestions = () => {
     saveBulkForm.questions = generatedQuestions.value;
     saveBulkForm.subject_id = aiForm.subject_id;
-    saveBulkForm.tags = aiForm.tags.map(t => t.id); // Lấy ID của tags
+    saveBulkForm.tags = aiForm.tags.map(t => t.id); 
 
     saveBulkForm.post(route('questions.store-bulk'), {
         onSuccess: () => {
             showAiModal.value = false;
             aiStep.value = 1;
             generatedQuestions.value = [];
-            aiForm.document = null;
+            aiForm.documents = [];
         }
     });
 };
 </script>
 
 <template>
-    <AppLayout title="Ngân hàng câu hỏi">
+    <AppLayout title="Data Bank">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Ngân hàng câu hỏi của tôi
-            </h2>
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                    <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono text-indigo-400 uppercase tracking-widest">Repository</div>
+                    <h2 class="font-black text-xl text-white uppercase tracking-wide font-exo">
+                        Question Bank
+                    </h2>
+                </div>
+            </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="mb-4 flex flex-wrap gap-4 items-center">
-                    <Link :href="route('questions.create')" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                        + Tạo câu hỏi mới
+        <div class="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Toolbar -->
+            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex gap-4">
+                    <Link :href="route('questions.create')" class="group relative px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold uppercase tracking-widest text-xs rounded-xl overflow-hidden transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]">
+                        <span class="relative z-10 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            Tạo câu hỏi thủ công
+                        </span>
                     </Link>
                     
                     <button 
                         @click="showAiModal = true"
-                        class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 animate-pulse"
+                        class="group relative px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-widest text-xs rounded-xl overflow-hidden transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)]"
                     >
-                        ✨ Tạo bằng AI (Gemini)
+                        <span class="relative z-10 flex items-center gap-2">
+                            <svg class="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            Tạo câu hỏi bằng AI
+                        </span>
+                        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
                     </button>
-                    <Link :href="route('subjects.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">+ Quản lý Môn học</Link>
-                    <Link :href="route('tags.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">+ Quản lý Thẻ (Tags)</Link>
-                    <Link :href="route('questions.import.create')" class="inline-flex items-center px-4 py-2 bg-green-100 border border-green-300 rounded-md font-semibold text-xs text-green-700 uppercase tracking-widest shadow-sm hover:bg-green-200">+ Import từ File</Link>
+
+                    <Link :href="route('questions.import.create')" class="px-4 py-2.5 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold uppercase tracking-widest text-xs rounded-xl transition-all">
+                        Nhập dữ liệu từ file Excel/CSV
+                    </Link>
                 </div>
 
-                <DialogModal :show="showAiModal" @close="showAiModal = false" maxWidth="4xl">
-                    <template #title>
-                        <span class="text-purple-700">✨ Tạo câu hỏi tự động với Gemini AI</span>
-                    </template>
-
-                    <template #content>
-    <div v-if="aiStep === 1">
-        <div class="space-y-4">
-            <div>
-                <InputLabel value="1. Chọn Môn học (Bắt buộc)" />
-                <select v-model="aiForm.subject_id" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full mt-1">
-                    <option :value="null">-- Chọn môn --</option>
-                    <option v-for="sub in props.subjects" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
-                </select>
-            </div>
-
-            <div>
-                <InputLabel value="2. Gắn Thẻ (Tùy chọn)" />
-                <VueMultiselect
-                    v-model="aiForm.tags"
-                    :options="props.tags"
-                    track-by="id"
-                    label="name"
-                    :multiple="true"
-                    placeholder="Chọn thẻ"
-                    class="mt-1"
-                />
-            </div>
-
-            <div>
-                <InputLabel value="3. Tài liệu nguồn (Chọn nhiều file)" />
-                <input 
-                    type="file" 
-                    multiple @change="handleFileUpload" 
-                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" 
-                />
-                <p class="text-xs text-gray-500 mt-1">
-                    Hỗ trợ PDF, Word, TXT (Max 10MB). 
-                    <span v-if="aiForm.documents.length > 0" class="font-bold text-green-600">
-                        Đã chọn {{ aiForm.documents.length }} file.
-                    </span>
-                </p>
-            </div>
-            
-            <div>
-                <InputLabel value="4. Yêu cầu riêng cho AI (Tùy chọn)" />
-                <textarea 
-                    v-model="aiForm.custom_instructions" 
-                    class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 text-sm"
-                    rows="2"
-                    placeholder="Ví dụ: Chỉ lấy kiến thức chương 1, tạo câu hỏi khó, tránh hỏi về ngày tháng..."
-                ></textarea>
-            </div>
-
-            <div>
-                <InputLabel value="5. Số lượng câu hỏi muốn tạo" />
-                <input type="number" v-model="aiForm.number_of_questions" min="1" max="20" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-20 mt-1" />
-            </div>
-        </div>
-        
-        <div v-if="isGenerating" class="mt-6 text-center">
-            <svg class="animate-spin h-8 w-8 text-purple-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="text-gray-600 font-medium">
-                Gemini đang đọc {{ aiForm.documents.length }} tài liệu và suy nghĩ... (Có thể mất 10-20s)
-            </span>
-        </div>
-    </div>
-
-    <div v-else>
-        <div class="mb-4 bg-green-50 p-3 rounded-md border border-green-200 text-green-800">
-            ✅ AI đã tạo xong! Vui lòng kiểm tra kỹ nội dung trước khi lưu.
-        </div>
-        <div class="max-h-96 overflow-y-auto space-y-6 pr-2">
-            <div v-for="(q, index) in generatedQuestions" :key="index" class="border p-4 rounded-lg bg-gray-50 relative">
-                <button @click="generatedQuestions.splice(index, 1)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs font-bold">XÓA</button>
-                
-                <label class="block text-xs font-bold text-gray-700 mb-1">Câu hỏi {{ index + 1 }}:</label>
-                <textarea v-model="q.question_text" class="w-full border-gray-300 rounded-md shadow-sm text-sm" rows="2"></textarea>
-                
-                <div class="mt-2 space-y-2">
-                    <div v-for="(opt, optIndex) in q.options" :key="optIndex" class="flex items-center gap-2">
-                        <input type="radio" :name="'correct_' + index" :checked="opt.is_correct" @change="() => { q.options.forEach(o => o.is_correct = false); opt.is_correct = true; }" />
-                        <input type="text" v-model="opt.text" class="flex-1 border-gray-300 rounded-md shadow-sm text-xs py-1" />
-                    </div>
+                <div class="flex gap-2">
+                    <Link :href="route('subjects.index')" class="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white rounded-lg text-[10px] uppercase font-bold tracking-wider transition">Quản lý môn học</Link>
+                    <Link :href="route('tags.index')" class="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white rounded-lg text-[10px] uppercase font-bold tracking-wider transition">Quản lý nhãn</Link>
                 </div>
             </div>
-        </div>
-    </div>
-</template>
 
-                    <template #footer>
-                        <SecondaryButton @click="showAiModal = false" :disabled="isGenerating || saveBulkForm.processing">
-                            Hủy
-                        </SecondaryButton>
-
-                        <PrimaryButton 
-                            v-if="aiStep === 1" 
-                            class="ml-3 bg-purple-600 hover:bg-purple-700" 
-                            @click="generateQuestions"
-                            :disabled="isGenerating"
-                        >
-                            {{ isGenerating ? 'Đang xử lý...' : 'Tạo câu hỏi' }}
-                        </PrimaryButton>
-
-                        <PrimaryButton 
-                            v-if="aiStep === 2" 
-                            class="ml-3" 
-                            @click="saveGeneratedQuestions"
-                            :disabled="saveBulkForm.processing"
-                        >
-                            {{ saveBulkForm.processing ? 'Đang lưu...' : 'Lưu tất cả vào Ngân hàng' }}
-                        </PrimaryButton>
-                    </template>
-                </DialogModal>
-                <div class="bg-white p-4 shadow-md rounded-lg mb-6">
-                   <h3 class="text-lg font-semibold mb-3">Tìm & Lọc</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Search Console -->
+            <div class="bg-[#0f172a] border border-slate-700 rounded-2xl p-5 mb-8 shadow-xl relative">
+                <!-- Decoration Container (Clipped) -->
+                <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-full blur-2xl"></div>
+                </div>
+                
+                <!-- Content (Visible Overflow for Dropdowns) -->
+                <div class="relative z-10">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 font-mono flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        Thanh tìm kiếm
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Môn học</label>
                             <VueMultiselect
                                 v-model="filterForm.subject"
                                 :options="props.subjects.map(s => s.id)"
                                 :custom-label="id => props.subjects.find(s => s.id === id)?.name"
-                                placeholder="Chọn môn học"
+                                placeholder="Chọn Môn Học"
+                                class="custom-multiselect"
                             />
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Thẻ</label>
                             <VueMultiselect
                                 v-model="filterForm.tags"
                                 :options="props.tags.map(t => t.id)"
                                 :custom-label="id => props.tags.find(t => t.id === id)?.name"
                                 :multiple="true"
-                                placeholder="Chọn thẻ"
+                                placeholder="Chọn Nhãn"
+                                class="custom-multiselect"
                             />
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Nội dung</label>
+                        <div class="md:col-span-2 flex gap-2">
                             <input
                                 v-model="filterForm.search"
                                 type="text"
-                                placeholder="Tìm theo nội dung câu hỏi..."
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                                placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
+                                class="w-full bg-slate-900 border-slate-700 text-white rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500/20"
                             />
+                            <button @click="resetFilters" class="px-3 py-2 border border-slate-600 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
                         </div>
                     </div>
-                    <button @click="resetFilters" class="mt-4 text-sm text-blue-600 hover:text-blue-800">
-                        Xóa bộ lọc
-                    </button>
                 </div>
+            </div>
 
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <ul class="divide-y divide-gray-200">
-                        <li v-if="questions.data.length === 0" class="p-6 text-gray-500 text-center">
-                            Không tìm thấy câu hỏi nào.
-                        </li>
-                        
-                        <li v-for="question in questions.data" :key="question.id" class="p-6">
-                            <div class="mb-2 flex flex-wrap gap-2 items-center">
-                                <span v-if="question.subject" class="px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-800 rounded-full">
+            <!-- Questions Grid -->
+            <div class="grid grid-cols-1 gap-4">
+                <div v-if="questions.data.length === 0" class="p-12 text-center border border-dashed border-slate-700 rounded-2xl bg-slate-900/30">
+                    <p class="text-slate-500 font-mono text-sm">>> NO DATA NODES FOUND.</p>
+                </div>
+                
+                <div v-for="question in questions.data" :key="question.id" 
+                     class="group bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 rounded-xl p-5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(99,102,241,0.1)] relative overflow-hidden">
+                    
+                    <!-- Hover Highlight -->
+                    <div class="absolute left-0 top-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition duration-200"></div>
+
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="flex-1">
+                            <div class="mb-3 flex flex-wrap gap-2 items-center">
+                                <span v-if="question.subject" class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-800 text-indigo-400 border border-slate-700 rounded">
                                     {{ question.subject.name }}
                                 </span>
-                                <span v-for="tag in question.tags" :key="tag.id" class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-700 rounded-full">
+                                <span v-for="tag in question.tags" :key="tag.id" class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 rounded">
                                     {{ tag.name }}
                                 </span>
                             </div>
 
-                            <div class="flex justify-between items-center">
-                                <div class="flex-1">
-                                    <p class="font-semibold text-gray-900">{{ question.question_text }}</p>
-                                    <img 
-                                        v-if="question.image_path" 
-                                        :src="'/storage/' + question.image_path" 
-                                        class="mt-2 w-full max-w-xs rounded-md border"
-                                    >
-                                    <ul class="mt-2 list-disc list-inside">
-                                        <li
-                                            v-for="option in question.options" :key="option.id"
-                                            :class="{ 'font-bold text-green-600': option.is_correct }"
-                                        >
-                                            {{ option.option_text }}
-                                        </li>
-                                    </ul>
-                                </div>
-                                
-                                <div class="flex-shrink-0 ml-4">
-                                    <Link
-                                        :href="route('questions.edit', question.id)"
-                                        class="text-sm font-medium text-indigo-600 hover:text-indigo-900"
-                                    >
-                                        Sửa
-                                    </Link>
-                                    <button
-                                        @click="deleteQuestion(question.id)"
-                                        class="ml-4 text-sm font-medium text-red-600 hover:text-red-900"
-                                    >
-                                        Xóa
-                                    </button>
+                            <p class="font-bold text-slate-200 font-exo text-sm mb-3">{{ question.question_text }}</p>
+                            
+                            <img v-if="question.image_path" :src="'/storage/' + question.image_path" class="mb-3 w-32 h-auto rounded border border-slate-700">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div v-for="option in question.options" :key="option.id"
+                                     class="flex items-center gap-2 text-xs font-mono p-2 rounded"
+                                     :class="option.is_correct ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-950 border border-slate-800 text-slate-500'">
+                                    <div class="w-1.5 h-1.5 rounded-full" :class="option.is_correct ? 'bg-emerald-500' : 'bg-slate-700'"></div>
+                                    {{ option.option_text }}
                                 </div>
                             </div>
-                        </li>
-                    </ul>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2 opacity-50 group-hover:opacity-100 transition">
+                            <Link :href="route('questions.edit', question.id)" class="p-2 bg-slate-800 hover:bg-cyan-600 text-slate-400 hover:text-white rounded border border-slate-700 transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </Link>
+                            <button @click="deleteQuestion(question.id)" class="p-2 bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white rounded border border-slate-700 transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-                <Pagination :links="questions.links" class="mt-6" />
             </div>
+            
+            <Pagination :links="questions.links" class="mt-8" />
         </div>
+
+        <!-- AI GENERATOR MODAL -->
+        <DialogModal :show="showAiModal" @close="showAiModal = false" maxWidth="4xl">
+            <template #title>
+                <div class="flex items-center gap-2 text-purple-400">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <span class="font-exo font-bold uppercase tracking-wide">TẠO CÂU HỎI BẰNG AI</span>
+                </div>
+            </template>
+
+            <template #content>
+                <div v-if="aiStep === 1" class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <InputLabel value="Môn học (Bắt buộc)" />
+                            <select v-model="aiForm.subject_id" class="bg-slate-900 border-slate-700 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 w-full mt-1 font-mono">
+                                <option :value="null">-- Chọn Môn Học --</option>
+                                <option v-for="sub in props.subjects" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value="Nhãn" />
+                            <VueMultiselect
+                                v-model="aiForm.tags"
+                                :options="props.tags"
+                                track-by="id"
+                                label="name"
+                                :multiple="true"
+                                placeholder="Chọn nhãn"
+                                class="custom-multiselect mt-1"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <InputLabel value="Thêm tài liệu (PDF, DOCX, TXT)" />
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-700 border-dashed rounded-xl hover:border-purple-500 transition-colors bg-slate-900/50">
+                            <div class="space-y-1 text-center">
+                                <svg class="mx-auto h-12 w-12 text-slate-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <div class="flex text-sm text-slate-400">
+                                    <label class="relative cursor-pointer bg-slate-800 rounded-md font-medium text-purple-400 hover:text-purple-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500 px-2">
+                                        <span>Upload files</span>
+                                        <input type="file" multiple @change="handleFileUpload" class="sr-only" />
+                                    </label>
+                                    <p class="pl-1">or drag and drop</p>
+                                </div>
+                                <p class="text-xs text-slate-500">
+                                    Files selected: <span class="text-white font-bold">{{ aiForm.documents.length }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <InputLabel value="Thêm yêu cầu cụ thể" />
+                        <textarea v-model="aiForm.custom_instructions" class="w-full bg-slate-900 border-slate-700 text-white rounded-lg text-sm font-mono mt-1 focus:border-purple-500 focus:ring-purple-500/20" rows="2" placeholder="// Ví dụ: Thêm cho tôi những câu hỏi có độ khó cao"></textarea>
+                    </div>
+
+                    <div>
+                        <InputLabel value="Số lượng câu hỏi" />
+                        <div class="flex items-center gap-4">
+                            <input type="range" v-model="aiForm.number_of_questions" min="1" max="50" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                            <span class="text-purple-400 font-bold font-mono text-lg w-8">{{ aiForm.number_of_questions }}</span>
+                        </div>
+                    </div>
+                    
+                    <div v-if="isGenerating" class="flex flex-col items-center justify-center py-8">
+                        <div class="relative w-16 h-16">
+                            <div class="absolute inset-0 border-t-2 border-purple-500 rounded-full animate-spin"></div>
+                            <div class="absolute inset-2 border-r-2 border-indigo-500 rounded-full animate-spin-reverse"></div>
+                        </div>
+                        <p class="text-purple-400 font-mono text-xs mt-4 animate-pulse">ANALYZING DATA STREAMS...</p>
+                    </div>
+                </div>
+
+                <div v-else class="h-[60vh] flex flex-col">
+                    <div class="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs font-mono flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        GENERATION COMPLETE. REVIEW OUTPUT.
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                        <div v-for="(q, index) in generatedQuestions" :key="index" class="bg-slate-900 border border-slate-700 p-4 rounded-xl relative group">
+                            <button @click="generatedQuestions.splice(index, 1)" class="absolute top-2 right-2 text-slate-600 hover:text-rose-500 transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                            
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Query {{ index + 1 }}</label>
+                            <textarea v-model="q.question_text" class="w-full bg-slate-950 border-slate-800 rounded-lg text-sm text-slate-200 mb-3" rows="2"></textarea>
+                            
+                            <div class="space-y-2">
+                                <div v-for="(opt, optIndex) in q.options" :key="optIndex" class="flex items-center gap-3">
+                                    <input type="radio" :name="'correct_' + index" :checked="opt.is_correct" @change="() => { q.options.forEach(o => o.is_correct = false); opt.is_correct = true; }" class="bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500" />
+                                    <input type="text" v-model="opt.text" class="flex-1 bg-slate-950 border-slate-800 rounded text-xs text-slate-300 py-1" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template #footer>
+                <SecondaryButton @click="showAiModal = false" :disabled="isGenerating || saveBulkForm.processing">Hủy</SecondaryButton>
+
+                <PrimaryButton v-if="aiStep === 1" class="ml-3 !bg-purple-600 hover:!bg-purple-500" @click="generateQuestions" :disabled="isGenerating">
+                    {{ isGenerating ? 'Đang tạo câu hỏi...' : 'Tạo câu hỏi' }}
+                </PrimaryButton>
+
+                <PrimaryButton v-if="aiStep === 2" class="ml-3 !bg-emerald-600 hover:!bg-emerald-500" @click="saveGeneratedQuestions" :disabled="saveBulkForm.processing">
+                    {{ saveBulkForm.processing ? 'Đang lưu...' : 'Lưu vào ngân hàng câu hỏi' }}
+                </PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>
+
+<style>
+/* Override VueMultiselect for Dark Mode */
+.custom-multiselect .multiselect__tags {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: white;
+    border-radius: 0.5rem;
+}
+.custom-multiselect .multiselect__input, .custom-multiselect .multiselect__single {
+    background-color: #0f172a;
+    color: white;
+}
+.custom-multiselect .multiselect__content-wrapper {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+.custom-multiselect .multiselect__option {
+    background-color: #1e293b;
+    color: #cbd5e1;
+}
+.custom-multiselect .multiselect__option--highlight {
+    background-color: #06b6d4; /* Cyan */
+    color: white;
+}
+.custom-multiselect .multiselect__option--selected {
+    background-color: #334155;
+    color: white;
+}
+.custom-multiselect .multiselect__tag {
+    background-color: #06b6d4;
+    color: #0f172a;
+    font-weight: bold;
+}
+.custom-multiselect .multiselect__tag-icon:hover {
+    background-color: #0891b2;
+}
+
+/* Custom Scrollbar for Multiselect */
+.custom-multiselect .multiselect__content-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-multiselect .multiselect__content-wrapper::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+.custom-multiselect .multiselect__content-wrapper::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+}
+.custom-multiselect .multiselect__content-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #06b6d4;
+}
+</style>

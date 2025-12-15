@@ -15,7 +15,41 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['"Be Vietnam Pro"', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                slate: {
+                    950: '#020617', // Ensure 950 exists if using older tailwind, but 3.4 has it.
+                }
+            },
+            animation: {
+                blob: "blob 7s infinite",
+                float: "float 6s ease-in-out infinite",
+                shine: "shine 1.5s infinite",
+                'spin-slow': 'spin 3s linear infinite',
+            },
+            keyframes: {
+                blob: {
+                    "0%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                    "33%": {
+                        transform: "translate(30px, -50px) scale(1.1)",
+                    },
+                    "66%": {
+                        transform: "translate(-20px, 20px) scale(0.9)",
+                    },
+                    "100%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                },
+                float: {
+                    "0%, 100%": { transform: "translateY(0)" },
+                    "50%": { transform: "translateY(-20px)" },
+                },
+                shine: {
+                    "100%": { left: "125%" },
+                },
             },
         },
     },
