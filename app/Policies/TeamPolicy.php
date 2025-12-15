@@ -31,7 +31,7 @@ class TeamPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return in_array($user->role, ['teacher']);    
     }
 
     /**
