@@ -23,6 +23,8 @@ class Team extends JetstreamTeam
      */
     protected $casts = [
         'personal_team' => 'boolean',
+        'grade_weights' => 'array',
+        'penalty_policy' => 'array', // <--- THÊM DÒNG NÀY
     ];
 
     /**
@@ -34,6 +36,7 @@ class Team extends JetstreamTeam
         'name',
         'personal_team',
         'join_code',
+        'grading_type',
     ];
 
     /**

@@ -138,7 +138,7 @@ const closeModal = () => {
                     </div>
 
                     <!-- Quick Actions Module -->
-                    <div class="space-y-3">
+                   <div class="space-y-3">
                          <div class="flex items-center gap-2 mb-1 px-1">
                             <div class="w-1 h-3 bg-cyan-500 rounded-sm"></div>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-exo">Thao tác</span>
@@ -152,6 +152,20 @@ const closeModal = () => {
                                 <span class="text-[9px] text-indigo-300/60 font-mono">Xem bảng chuyên cần</span>
                             </div>
                             <svg class="w-5 h-5 text-indigo-500 group-hover:text-white relative z-10 transform group-hover:scale-110 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        </Link>
+
+                        <Link :href="route('gradebook.index', team.id)" 
+                            class="group relative flex items-center justify-between w-full px-5 py-4 bg-emerald-600/10 border border-emerald-500/30 hover:border-emerald-400 rounded-xl overflow-hidden transition-all duration-300">
+                            <div class="absolute inset-0 bg-emerald-600/10 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300"></div>
+                            
+                            <div class="relative z-10 flex flex-col items-start">
+                                <span class="text-xs font-black text-emerald-400 group-hover:text-white uppercase tracking-widest font-exo">Bảng Điểm & Xếp Hạng</span>
+                                <span class="text-[9px] text-emerald-300/60 font-mono">Quản lý điểm số chi tiết</span>
+                            </div>
+
+                            <svg class="w-5 h-5 text-emerald-500 group-hover:text-white relative z-10 transform group-hover:scale-110 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                            </svg>
                         </Link>
                     </div>
                 </div>

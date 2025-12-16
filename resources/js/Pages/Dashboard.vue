@@ -226,6 +226,7 @@ onUnmounted(() => {
                     <div v-for="team in ownedTeams" :key="team.id" class="group relative bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-5 transition-all duration-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1 overflow-hidden">
                         <!-- Decorative bg -->
                         <div class="absolute -right-6 -top-6 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
+                        <div class="font-bold text-white">{{ team.name }}</div>
                         
                         <div class="relative z-10 flex flex-col h-full">
                             <div class="flex justify-between items-start mb-4">
