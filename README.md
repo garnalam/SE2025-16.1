@@ -70,6 +70,17 @@ DB_USERNAME=root     # <- User của MySQL (mặc định của XAMPP là 'root'
 
 DB_PASSWORD=        # <- Mật khẩu của MySQL (mặc định của XAMPP là rỗng)
 
+Cấu hình Google Gemini API (AI): 
+
+1. Truy cập https://aistudio.google.com
+2. Đăng nhập bằng tài khoản Google
+3. Chọn **Get API key**
+4. Bấm **Create API key**
+5. Sao chép API key vừa tạo
+
+Lấy API key điền vào file .env :
+GEMINI_API_KEY=your_gemini_api_key_here
+
 Truy cập pusher.com và đăng ký tài khoản (Sign Up) miễn phí.
 
 Sau khi đăng nhập, chọn Channels -> Bấm Create App.
@@ -113,6 +124,16 @@ VITE_PUSHER_HOST="${PUSHER_HOST}"
 VITE_PUSHER_PORT="${PUSHER_PORT}"
 VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
 VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+
+Chạy lệnh sau trong Terminal để cài đặt các gói cần thiết cho tính năng Real-time
+
+php artisan install:broadcasting
+
+Trong quá trình chạy, terminal sẽ hiện ra các câu hỏi cấu hình. Hãy chọn chính xác theo hướng dẫn dưới đây:
+1. Which broadcasting driver would you like to use? -> Chọn: Pusher
+2. Pusher App ID / Key / Secret: Lấy thông tin từ Pusher -> Enter
+3. Pusher App Cluster -> Chọn: ap1
+4. Would you like to install and build the Node dependencies required for broadcasting? -> Nhập: y (hoặc yes) để cài đặt thư viện phía Client
 
 2. Sửa lỗi SSL trên máy cá nhân (BẮT BUỘC CHO WINDOWS)
 Vì chúng ta đang chạy trên Localhost (Windows), PHP sẽ chặn kết nối đến Pusher do không tin tưởng chứng chỉ bảo mật. Bạn cần làm bước này 1 lần duy nhất trên máy tính của bạn:
@@ -159,13 +180,17 @@ Chạy Database Migrations:
 Lệnh này sẽ tạo tất cả các bảng cần thiết trong database của bạn.
 
 php artisan migrate
-
-
 Tạo Symbolic Link (Storage):
 
 Lệnh này rất quan trọng. Nó tạo một lối tắt từ public/storage đến storage/app/public, cho phép ứng dụng hiển thị các file đã được upload (như ảnh đại diện, file bài tập).
 
 php artisan storage:link
+
+
+Chạy lệnh sau để đồng bộ dữ liệu badge:
+
+php artisan badges:sync
+
 
 
 🖥️ Khởi chạy Ứng dụng
