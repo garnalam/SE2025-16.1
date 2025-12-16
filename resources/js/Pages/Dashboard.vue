@@ -89,7 +89,8 @@ const startAttendance = async (teamId) => {
         
         // 2. Lắng nghe ai vào lớp (Real-time)
         Echo.private(`attendance.${currentSessionId.value}`)
-            .listen('StudentAttended', (e) => {
+            .listen('.StudentAttended', (e) => {
+                console.log("Sự kiện nhận được:", e);
                 // Thêm học sinh vào đầu danh sách hiển thị
                 joinedStudents.value.unshift(e.student);
             });
@@ -115,22 +116,34 @@ const updateQrUrl = () => {
     // Tạo URL: http://localhost:8000/attendance/{session}/{token}
     currentQrUrl.value = `${window.location.origin}/attendance/${currentSessionId.value}/${currentToken.value}`;
 };
-
+const showSummaryModal = ref(false); // Điều khiển hiển thị modal kết quả
+const sessionSummary = ref(null);    // Chứa dữ liệu báo cáo từ server
 // Kết thúc phiên
-const closeAttendance = () => {
-    if (confirm("Bạn có chắc muốn chốt sổ điểm danh?")) {
+const closeAttendance = async () => {
+    if (!confirm("Bạn có chắc muốn chốt sổ điểm danh?")) return;
+
+    try {
         // Gọi API đóng phiên
-        router.post(route('attendance.close', currentSessionId.value), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Dọn dẹp
-                if (refreshInterval.value) clearInterval(refreshInterval.value);
-                Echo.leave(`attendance.${currentSessionId.value}`);
-                showAttendanceModal.value = false;
-                joinedStudents.value = [];
-                currentSessionId.value = null;
-            }
-        });
+        const response = await axios.post(route('attendance.close', currentSessionId.value));
+        
+        // 1. Dọn dẹp logic real-time cũ
+        if (refreshInterval.value) clearInterval(refreshInterval.value);
+        Echo.leave(`attendance.${currentSessionId.value}`);
+        
+        // 2. Tắt modal QR code
+        showAttendanceModal.value = false;
+        
+        // 3. Lưu dữ liệu báo cáo và HIỆN MODAL THỐNG KÊ
+        sessionSummary.value = response.data.summary;
+        showSummaryModal.value = true; // <--- Mấu chốt ở đây
+
+        // 4. Reset các biến tạm
+        joinedStudents.value = [];
+        currentSessionId.value = null;
+
+    } catch (error) {
+        console.error(error);
+        alert("Có lỗi khi đóng phiên điểm danh.");
     }
 };
 
@@ -285,6 +298,50 @@ onUnmounted(() => {
                 >
                     KẾT THÚC PHIÊN ĐIỂM DANH
                 </button>
+            </div>
+        </Modal>
+        <Modal :show="showSummaryModal" @close="showSummaryModal = false">
+            <div class="p-6 bg-white rounded-lg">
+                <div class="text-center mb-6">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Kết quả điểm danh</h3>
+                    <div class="mt-2 flex justify-center items-baseline">
+                        <span class="text-4xl font-extrabold text-indigo-600">
+                            {{ sessionSummary?.present_count }}
+                        </span>
+                        <span class="ml-1 text-xl text-gray-500">
+                            / {{ sessionSummary?.total_students }}
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1">Tỷ lệ chuyên cần: {{ sessionSummary?.rate }}%</p>
+                </div>
+
+                <div class="mt-4">
+                    <h4 class="text-sm font-bold text-gray-700 mb-2 uppercase">
+                        Danh sách có mặt ({{ sessionSummary?.present_list.length }})
+                    </h4>
+                    <div class="bg-gray-50 rounded-md p-3 max-h-60 overflow-y-auto border border-gray-200">
+                        <ul class="divide-y divide-gray-200">
+                            <li v-for="user in sessionSummary?.present_list" :key="user.id" class="py-2 flex items-center">
+                                <img :src="user.profile_photo_url" class="h-8 w-8 rounded-full mr-3">
+                                <span class="text-sm font-medium text-gray-900">{{ user.name }}</span>
+                            </li>
+                            <li v-if="sessionSummary?.present_list.length === 0" class="text-center text-gray-500 italic py-2">
+                                Không có ai.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <button @click="showSummaryModal = false" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:text-sm">
+                        Xong
+                    </button>
+                </div>
             </div>
         </Modal>
     </AppLayout>

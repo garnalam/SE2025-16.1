@@ -34,6 +34,11 @@ class Team extends JetstreamTeam
         'name',
         'personal_team',
         'join_code',
+        'late_policy_type',     // 'none', 'fixed', 'daily'
+        'late_penalty_percent', // 10, 30...
+        'weight_attendance',
+        'weight_quiz',
+        'weight_assignment',
     ];
 
     /**

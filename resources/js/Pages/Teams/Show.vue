@@ -12,6 +12,8 @@ import UpdateTeamNameForm from '@/Pages/Teams/Partials/UpdateTeamNameForm.vue';
 
 import FormSection from '@/Components/FormSection.vue'; // <-- THÊM MỚI
 
+import { Link } from '@inertiajs/vue3'; // <--- THÊM DÒNG NÀY
+
 // Gán props để có thể dùng trong hàm copyToClipboard
 
 const props = defineProps({ // <-- CHỈNH SỬA DÒNG NÀY
@@ -109,6 +111,12 @@ const copyToClipboard = () => { // <-- THÊM MỚI
                             </div>
 
 
+
+                            <button type="button" @click="copyToClipboard" class="mt-3 text-sm text-blue-600 hover:text-blue-800">
+
+                                Sao chép mã
+
+                            </button>
 
                             <button type="button" @click="copyToClipboard" class="mt-3 text-sm text-blue-600 hover:text-blue-800">
 

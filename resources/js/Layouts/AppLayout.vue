@@ -83,7 +83,13 @@
                                     >
                                         Ngân hàng câu hỏi
                                     </NavLink>
-    
+                                    <NavLink 
+                                        v-if="$page.props.auth.user.current_team && $page.props.jetstream.hasTeamFeatures"
+                                        :href="route('gradebook.index', $page.props.auth.user.current_team.id)" 
+                                        :active="route().current('gradebook.*')"
+                                    >
+                                        Sổ Điểm
+                                    </NavLink>
                                     <button 
                                         v-if="userRole === 'student'"
                                         @click="openJoinModal" 
@@ -265,7 +271,14 @@
                             >
                                 Ngân hàng câu hỏi
                             </ResponsiveNavLink>
-    
+                            
+                            <ResponsiveNavLink 
+                                v-if="currentTeam && hasTeamFeatures"
+                                :href="route('gradebook.index', currentTeam.id)" 
+                                :active="route().current('gradebook.*')"
+                            >
+                                Sổ Điểm
+                            </ResponsiveNavLink>
                             <ResponsiveNavLink 
                                 v-if="userRole === 'student'"
                                 as="button"

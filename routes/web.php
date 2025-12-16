@@ -26,6 +26,7 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\QuestionImportController;
 use App\Http\Controllers\QuizTemplateController;
+use App\Http\Controllers\Teacher\GradebookController;
 
 // --- Imports Models ---
 use App\Models\Submission;
@@ -137,7 +138,8 @@ Route::middleware([
             ]);
         }
     })->name('dashboard');
-
+    Route::get('/analytics/class/{classroom}', [AnalyticsController::class, 'getClassAnalytics'])
+        ->name('analytics.class');
     // ===== 2. THÔNG BÁO (NOTIFICATIONS) - KHỚP VỚI VUE =====
     // Lấy danh sách thông báo
     Route::get('/notifications', function (Request $request) {
@@ -181,7 +183,7 @@ Route::middleware([
     Route::post('/attendance/join-code', [AttendanceController::class, 'joinByCode'])->name('attendance.join-code');
 
     // Thêm vào dưới route attendance.history
-Route::post('/attendance/toggle', [AttendanceController::class, 'toggle'])->name('attendance.toggle');
+    Route::post('/attendance/toggle', [AttendanceController::class, 'toggle'])->name('attendance.toggle');
 
     // Route xem lịch sử
     Route::get('/teams/{team}/attendance-history', [AttendanceController::class, 'history'])->name('attendance.history');
@@ -260,4 +262,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
     Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])->name('submissions.grade');
     Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])->name('submissions.downloadFile');
+});
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    // ... các route khác ...
+
+    // Route xem bảng điểm
+    Route::get('/teams/{team}/gradebook', [GradebookController::class, 'index'])->name('gradebook.index');
+    
+    // Route cập nhật cài đặt phạt
+    Route::post('/teams/{team}/gradebook/settings', [GradebookController::class, 'updateSettings'])->name('gradebook.settings');
 });

@@ -115,14 +115,52 @@ class AttendanceController extends Controller
     // 5. Kết thúc phiên
     public function close(AttendanceSession $session)
     {
+        // 1. Đóng phiên
         $session->update(['is_active' => false]);
-        return back()->with('success', 'Đã đóng phiên điểm danh.');
+
+        // 2. Lấy thông tin lớp học
+        $team = $session->team;
+        
+        // 3. Đếm tổng số học sinh trong lớp (dựa trên bảng trung gian)
+        $totalStudents = $team->users()
+            ->where('team_user.role', 'student')
+            ->count();
+
+        // 4. Lấy danh sách những bạn đã có mặt
+        // Eager load 'user' để lấy tên và avatar
+        $presentRecords = $session->attendanceRecords()
+            ->with('user:id,name,profile_photo_path') 
+            ->where('status', 'present')
+            ->get();
+            
+        $presentCount = $presentRecords->count();
+        $absentCount = max(0, $totalStudents - $presentCount);
+        $rate = $totalStudents > 0 ? round(($presentCount / $totalStudents) * 100) : 0;
+
+        // 5. Trả về JSON để Frontend hiển thị Popup (Modal)
+        return response()->json([
+            'message' => 'Đã đóng phiên điểm danh.',
+            'summary' => [
+                'total_students' => $totalStudents,
+                'present_count' => $presentCount,
+                'absent_count' => $absentCount,
+                'rate' => $rate,
+                'present_list' => $presentRecords->map(fn($r) => $r->user), // Danh sách object user
+            ]
+        ]);
     }
 
 public function history(Team $team)
     {
         $this->authorize('view', $team); //
         
+        // 1. Lấy danh sách ID của các buổi điểm danh trong lớp này
+        // (Dùng để đếm xem học sinh tham gia bao nhiêu buổi TRONG LỚP NÀY)
+        $teamSessionIds = $team->attendanceSessions()->pluck('id');
+        
+        // 2. Tổng số buổi giáo viên đã tạo
+        $totalSessions = $teamSessionIds->count();
+
         // Lấy danh sách sessions sắp xếp theo ngày
         $sessions = $team->attendanceSessions()
             ->orderBy('created_at', 'desc') // Mới nhất lên đầu (hoặc asc tùy bạn)
@@ -135,8 +173,20 @@ public function history(Team $team)
             ->with(['attendanceRecords' => function($q) use ($sessions) {
                 $q->whereIn('attendance_session_id', $sessions->pluck('id'));
             }])
+            // --- MỚI: Đếm số lần có mặt (status = present) trong các buổi của lớp này ---
+            ->withCount(['attendanceRecords as present_count' => function ($query) use ($teamSessionIds) {
+                $query->whereIn('attendance_session_id', $teamSessionIds)
+                      ->where('status', 'present');
+            }])
             ->orderBy('name')
-            ->get();
+            ->get()
+            // --- MỚI: Tính tỷ lệ % cho từng em ---
+            ->map(function ($student) use ($totalSessions) {
+                $student->attendance_rate = $totalSessions > 0 
+                    ? round(($student->present_count / $totalSessions) * 100) 
+                    : 0;
+                return $student;
+            });
 
         // Kiểm tra quyền giáo viên (để hiển thị nút sửa bên Vue)
         $canEdit = Gate::allows('update', $team);
@@ -146,6 +196,7 @@ public function history(Team $team)
             'sessions' => $sessions,
             'students' => $students,
             'canEdit' => $canEdit,
+            'totalSessions' => $totalSessions,
         ]);
     }
 
