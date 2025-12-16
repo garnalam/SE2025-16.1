@@ -30,6 +30,7 @@ class Post extends Model
         'title',
         'due_date',
         'max_points',
+        'weight',
         // --- KẾT THÚC THÊM ---
     ];
 
@@ -43,6 +44,7 @@ class Post extends Model
         
         // --- THÊM CASTS CHO ASSIGNMENT ---
         'due_date' => 'datetime',
+        'weight' => 'integer',
         // --- KẾT THÚC THÊM ---
     ];
 

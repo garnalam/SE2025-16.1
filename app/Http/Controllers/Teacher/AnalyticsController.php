@@ -8,6 +8,8 @@ use App\Models\Post; // Bài tập
 use App\Models\Submission; // Bài nộp
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class AnalyticsController extends Controller
 {
@@ -220,5 +222,115 @@ private function calculateStudentPerformanceChart($submissions, $studentUsers, $
             ]
         ]
     ];
+}
+public function gradebook(Request $request, Team $team)
+{
+    $user = Auth::user();
+    
+    // 1. Check quyền truy cập Team
+    if (!$user->belongsToTeam($team)) {
+        abort(403);
+    }
+
+    // 2. Xác định vai trò trong Team (Dựa vào bảng pivot team_user)
+    // Lưu ý: Team.php của bạn đã có withPivot('role'), ta sẽ dùng nó.
+    $membership = $team->users()->where('user_id', $user->id)->first();
+    // Nếu là owner thì coi như teacher
+    $role = ($team->user_id === $user->id) ? 'owner' : ($membership ? $membership->membership->role : null);
+
+    // 3. Lấy danh sách Bài tập (Assignments) và Bài Quiz (Quizzes)
+    // Giả sử 'post_type' phân biệt 'quiz' và 'assignment'
+    $quizzes = Post::where('team_id', $team->id)
+        ->where('post_type', 'quiz')
+        ->orderBy('created_at')
+        ->get(['id', 'title', 'max_points']); // Giả sử quiz cũng có max_points
+
+    $assignments = Post::where('team_id', $team->id)
+        ->where('post_type', 'assignment')
+        ->orderBy('due_date')
+        ->get(['id', 'title', 'max_points']);
+
+    // 4. Lấy danh sách học sinh cần xem điểm
+    $query = $team->users()->wherePivot('role', 'student');
+
+    // NẾU LÀ HỌC SINH: Chỉ lấy chính mình
+    if ($role === 'student') {
+        $query->where('users.id', $user->id);
+    }
+
+    // Eager Load dữ liệu điểm số để tránh N+1 Query
+    // Load submissions (cho bài tập) và quizAttempts (cho quiz)
+    $students = $query->with(['submissions', 'quizAttempts'])->get()->map(function ($student) use ($quizzes, $assignments) {
+        
+        // --- XỬ LÝ ĐIỂM QUIZ ---
+        $quizGrades = [];
+        $totalQuizScore = 0;
+        $totalQuizMax = 0;
+
+        foreach ($quizzes as $quiz) {
+            // Lấy lần làm bài tốt nhất hoặc mới nhất (tùy logic của bạn)
+            $attempt = $student->quizAttempts->where('post_id', $quiz->id)->sortByDesc('score')->first();
+            
+            $score = $attempt ? $attempt->score : null; // Giả sử QuizAttempt có cột score
+            $max = $quiz->max_points ?? 10; // Default 10 nếu null
+
+            $quizGrades[$quiz->id] = $score;
+            
+            if ($score !== null) {
+                $totalQuizScore += $score;
+                $totalQuizMax += $max;
+            }
+        }
+        
+        // Tính TB Quiz (Hệ số 10)
+        $quizAvg = ($totalQuizMax > 0) ? round(($totalQuizScore / $totalQuizMax) * 10, 2) : 0;
+
+        // --- XỬ LÝ ĐIỂM BÀI TẬP ---
+        $assignGrades = [];
+        $totalAssignScore = 0;
+        $totalAssignMax = 0;
+
+        foreach ($assignments as $assign) {
+            $sub = $student->submissions->where('post_id', $assign->id)->first();
+            $grade = $sub ? $sub->grade : null;
+            $max = $assign->max_points ?? 100;
+
+            $assignGrades[$assign->id] = $grade;
+
+            if ($grade !== null) {
+                $totalAssignScore += $grade;
+                $totalAssignMax += $max;
+            }
+        }
+
+        // Tính TB Bài tập (Hệ số 10)
+        // Giả sử bài tập chấm thang 100 thì chia 10 để về thang 10
+        $assignAvg = ($totalAssignMax > 0) ? round(($totalAssignScore / $totalAssignMax) * 10, 2) : 0;
+
+        // --- TỔNG KẾT ---
+        // Ví dụ: Quiz 40%, Bài tập 60%
+        $overallAvg = round(($quizAvg * 0.4) + ($assignAvg * 0.6), 2);
+
+        return [
+            'id' => $student->id,
+            'name' => $student->name,
+            'avatar' => $student->profile_photo_url,
+            'quiz_grades' => $quizGrades,
+            'quiz_avg' => $quizAvg,
+            'assign_grades' => $assignGrades,
+            'assign_avg' => $assignAvg,
+            'overall_avg' => $overallAvg,
+        ];
+    });
+
+    return Inertia::render('Gradebook/Index', [
+        'team' => $team,
+        'headers' => [
+            'quizzes' => $quizzes,
+            'assignments' => $assignments,
+        ],
+        'students' => $students,
+        'isTeacher' => ($role !== 'student'),
+    ]);
 }
 }

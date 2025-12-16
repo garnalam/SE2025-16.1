@@ -28,6 +28,7 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\QuestionImportController;
 use App\Http\Controllers\QuizTemplateController;
+use App\Http\Controllers\GradebookController;
 
 // --- Imports Models ---
 use App\Models\Submission;
@@ -367,4 +368,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/posts/{post}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
     Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])->name('submissions.grade');
     Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])->name('submissions.downloadFile');
+});
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    // ... các route khác ...
+    
+    Route::get('/team/{team}/gradebook', [AnalyticsController::class, 'gradebook'])
+        ->name('team.gradebook');
+    Route::get('/team/{team}/gradebook', [GradebookController::class, 'index'])->name('gradebook.index');
+    Route::post('/team/{team}/gradebook/settings', [GradebookController::class, 'updateSettings'])->name('gradebook.updateSettings');
 });
