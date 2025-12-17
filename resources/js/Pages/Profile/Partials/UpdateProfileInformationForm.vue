@@ -17,6 +17,7 @@ const form = useForm({
     _method: 'PUT',
     name: props.user.name,
     email: props.user.email,
+    bio: props.user.bio || '', // <--- QUAN TRỌNG: Khởi tạo giá trị Bio từ database
     photo: null,
 });
 
@@ -78,17 +79,15 @@ const clearPhotoFileInput = () => {
 <template>
     <FormSection @submitted="updateProfileInformation">
         <template #title>
-            Profile Information
+            Thông tin hồ sơ
         </template>
 
         <template #description>
-            Update your account's profile information and email address.
+            Cập nhật thông tin tài khoản và địa chỉ email của bạn.
         </template>
 
         <template #form>
-            <!-- Profile Photo -->
             <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
-                <!-- Profile Photo File Input -->
                 <input
                     id="photo"
                     ref="photoInput"
@@ -97,40 +96,37 @@ const clearPhotoFileInput = () => {
                     @change="updatePhotoPreview"
                 >
 
-                <InputLabel for="photo" value="Photo" />
+                <InputLabel for="photo" value="Ảnh đại diện" />
 
-                <!-- Current Profile Photo -->
                 <div v-show="! photoPreview" class="mt-2">
-                    <img :src="user.profile_photo_url" :alt="user.name" class="rounded-full size-20 object-cover">
+                    <img :src="user.profile_photo_url" :alt="user.name" class="rounded-full h-20 w-20 object-cover border-2 border-slate-600">
                 </div>
 
-                <!-- New Profile Photo Preview -->
                 <div v-show="photoPreview" class="mt-2">
                     <span
-                        class="block rounded-full size-20 bg-cover bg-no-repeat bg-center"
+                        class="block rounded-full h-20 w-20 bg-cover bg-no-repeat bg-center border-2 border-cyan-500"
                         :style="'background-image: url(\'' + photoPreview + '\');'"
                     />
                 </div>
 
-                <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                    Select A New Photo
+                <SecondaryButton class="mt-2 me-2 !text-xs" type="button" @click.prevent="selectNewPhoto">
+                    Chọn ảnh mới
                 </SecondaryButton>
 
                 <SecondaryButton
                     v-if="user.profile_photo_path"
                     type="button"
-                    class="mt-2"
+                    class="mt-2 !text-xs !text-rose-400"
                     @click.prevent="deletePhoto"
                 >
-                    Remove Photo
+                    Xóa ảnh
                 </SecondaryButton>
 
                 <InputError :message="form.errors.photo" class="mt-2" />
             </div>
 
-            <!-- Name -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Họ và tên" />
                 <TextInput
                     id="name"
                     v-model="form.name"
@@ -142,7 +138,6 @@ const clearPhotoFileInput = () => {
                 <InputError :message="form.errors.name" class="mt-2" />
             </div>
 
-            <!-- Email -->
             <div class="col-span-6 sm:col-span-4">
                 <InputLabel for="email" value="Email" />
                 <TextInput
@@ -156,34 +151,47 @@ const clearPhotoFileInput = () => {
                 <InputError :message="form.errors.email" class="mt-2" />
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
-                    <p class="text-sm mt-2">
-                        Your email address is unverified.
+                    <p class="text-sm mt-2 text-slate-400">
+                        Email của bạn chưa được xác thực.
 
                         <Link
                             :href="route('verification.send')"
                             method="post"
                             as="button"
-                            class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            class="underline text-sm text-cyan-400 hover:text-cyan-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             @click.prevent="sendEmailVerification"
                         >
-                            Click here to re-send the verification email.
+                            Ấn vào đây để gửi lại email xác thực.
                         </Link>
                     </p>
 
-                    <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-green-600">
-                        A new verification link has been sent to your email address.
+                    <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-emerald-400">
+                        Một liên kết xác thực mới đã được gửi đến email của bạn.
                     </div>
                 </div>
             </div>
+
+            <div class="col-span-6 sm:col-span-4">
+                <InputLabel for="bio" value="Bio / Giới thiệu ngắn" />
+                <textarea
+                    id="bio"
+                    v-model="form.bio"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm bg-[#020617] text-white border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/50" 
+                    rows="3"
+                    placeholder="Viết đôi dòng về bản thân bạn..."
+                ></textarea>
+                <InputError :message="form.errors.bio" class="mt-2" />
+            </div>
+
         </template>
 
         <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
+            <ActionMessage :on="form.recentlySuccessful" class="me-3 text-emerald-400">
+                Đã lưu.
             </ActionMessage>
 
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
+                Lưu thay đổi
             </PrimaryButton>
         </template>
     </FormSection>

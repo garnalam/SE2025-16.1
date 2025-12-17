@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\QuestionImportController;
 use App\Http\Controllers\QuizTemplateController;
 use App\Http\Controllers\GradebookController;
-
+use App\Http\Controllers\FollowerController; // <--- Đừng quên dòng này
 // --- Imports Models ---
 use App\Models\Submission;
 use App\Models\Team;
@@ -61,8 +62,12 @@ Route::middleware([
     // ===== 1. DASHBOARD & TÀI NGUYÊN CƠ BẢN =====
     Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
-
-    Route::get('/dashboard', function () {
+Route::get('/user/profile', [UserProfileController::class, 'show'])->name('profile.show'); 
+Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('profile.public');
+// Route Follow & Unfollow (ĐÂY LÀ 2 ROUTE BẠN ĐANG THIẾU)
+    Route::post('/u/{user}/follow', [FollowerController::class, 'store'])->name('user.follow');
+    Route::delete('/u/{user}/unfollow', [FollowerController::class, 'destroy'])->name('user.unfollow');
+Route::get('/dashboard', function () {
         $user = Auth::user();
         $currentTeam = $user->currentTeam;
 

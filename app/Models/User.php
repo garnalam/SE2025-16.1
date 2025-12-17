@@ -41,7 +41,8 @@ class User extends Authenticatable
         'password',
         'role',
         'xp',     // Gamification: Điểm kinh nghiệm
-        'level',  // Gamification: Cấp độ
+        'level',  // Gamification: Cấp độ,
+        'bio', // <--- Thêm dòng này
     ];
 
     /**
@@ -113,6 +114,26 @@ class User extends Authenticatable
     public function subjects() {
         return $this->hasMany(Subject::class);
     }
+
+    public function followers()
+{
+    return $this->belongsToMany(User::class, 'followers', 'user_id', 'follower_id');
+}
+
+public function followings()
+{
+    return $this->belongsToMany(User::class, 'followers', 'follower_id', 'user_id');
+}
+
+public function isFollowing(User $user)
+{
+    return $this->followings()->where('user_id', $user->id)->exists();
+}
+
+public function isFollowedBy(User $user)
+{
+    return $this->followers()->where('follower_id', $user->id)->exists();
+}
 
     // Các thẻ của giáo viên này
     public function tags() {

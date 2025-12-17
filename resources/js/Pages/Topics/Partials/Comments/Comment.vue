@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { Link } from '@inertiajs/vue3'; // <--- Import Link
 import CommentForm from './CommentForm.vue'; 
 
 const props = defineProps({
@@ -14,23 +15,25 @@ const toggleReplyForm = () => { showingReplyForm.value = !showingReplyForm.value
 <template>
     <div class="flex gap-3 group">
         <div class="flex flex-col items-center">
-             <img class="h-8 w-8 rounded-lg object-cover border border-slate-600 group-hover:border-cyan-500 transition-colors" :src="comment.user.profile_photo_url" :alt="comment.user.name">
+             <Link :href="route('profile.public', comment.user.id)" class="group-hover:ring-2 ring-cyan-500/50 rounded-lg transition-all">
+                 <img class="h-8 w-8 rounded-lg object-cover border border-slate-600 hover:border-cyan-500 transition-colors" :src="comment.user.profile_photo_url" :alt="comment.user.name">
+             </Link>
              <div class="w-px h-full bg-slate-800 mt-2 group-last:hidden"></div>
         </div>
         
         <div class="flex-1 pb-4">
             <div class="bg-[#1e293b] border border-white/5 rounded-r-xl rounded-bl-xl p-3 relative hover:border-white/10 transition-colors">
-                <!-- Header -->
                 <div class="flex flex-wrap items-center gap-2 mb-1">
-                    <span class="font-bold text-xs text-slate-200 font-exo">{{ comment.user.name }}</span>
+                    <Link :href="route('profile.public', comment.user.id)" class="font-bold text-xs text-slate-200 font-exo hover:text-cyan-400 hover:underline transition">
+                        {{ comment.user.name }}
+                    </Link>
                     
                     <div v-if="comment.user.role === 'student'" class="flex items-center gap-1">
                         <span class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
-                            LVL {{ comment.user.level }}
+                            LVL {{ comment.user.level || 1 }}
                         </span>
                         
-                         <!-- Badges (Simplified for dark mode) -->
-                        <div v-if="comment.user.badges && comment.user.badges.length > 0" class="flex -space-x-1 ml-1">
+                         <div v-if="comment.user.badges && comment.user.badges.length > 0" class="flex -space-x-1 ml-1">
                             <div v-for="badge in comment.user.badges" :key="badge.id" :title="badge.name" class="w-4 h-4 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
                                 <img v-if="badge.icon_path" :src="'/storage/' + badge.icon_path" class="w-3 h-3 object-contain">
                                 <div v-else class="w-2 h-2 rounded-full bg-yellow-500"></div>
