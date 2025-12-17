@@ -60,38 +60,52 @@ const openJoinModal = () => {
                 <div class="h-full flex flex-col bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_0_40px_-10px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/5">
                     
                     <!-- Sidebar Header -->
-                    <div class="h-24 flex items-center px-6 border-b border-white/5 bg-gradient-to-r from-white/5 to-transparent">
-                        <Link :href="route('dashboard')" class="flex items-center gap-4 group w-full">
-                            <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_20px_rgba(6,182,212,0.4)] group-hover:scale-110 transition-transform duration-300">
-                                <ApplicationMark class="h-6 w-auto text-white" />
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="font-black text-lg text-white tracking-wide uppercase font-exo">Smart<span class="text-cyan-400">Classroom</span></span>
-                                <span class="text-[10px] text-slate-400 font-mono tracking-widest uppercase">By SE2025-16.1</span>
-                            </div>
-                        </Link>
-                    </div>
+                    <div class="space-y-2">
+    <p class="px-4 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 font-mono">Các tính năng chính</p>
+    
+    <Link :href="route('dashboard')" 
+        :class="route().current('dashboard') 
+            ? 'bg-indigo-600/20 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] border-indigo-500/50' 
+            : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'"
+        class="flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 border backdrop-blur-sm group">
+        <svg class="mr-3 h-5 w-5 transition-transform group-hover:scale-110 duration-300" :class="route().current('dashboard') ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Bảng điều khiển
+    </Link>
+
+    <div class="px-4 py-2 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer group">
+        <NotificationBell class="w-full text-left" />
+    </div>
+</div>
 
                     <!-- Navigation -->
                     <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-8 custom-scrollbar">
                         
                         <!-- Group 1: CORE -->
                         <div class="space-y-2">
-                            <p class="px-4 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 font-mono">Các tính năng chính</p>
-                            
-                            <Link :href="route('dashboard')" 
-                                :class="route().current('dashboard') 
-                                    ? 'bg-indigo-600/20 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] border-indigo-500/50' 
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'"
-                                class="flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 border backdrop-blur-sm group">
-                                <svg class="mr-3 h-5 w-5 transition-transform group-hover:scale-110 duration-300" :class="route().current('dashboard') ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                                Bảng điều khiển
-                            </Link>
+    <p class="px-4 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 font-mono">Góc Học Tập</p>
+    
+    <Link :href="route('study.documents')" 
+        :class="route().current('study.documents') 
+            ? 'bg-purple-600/20 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border-purple-500/50' 
+            : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'"
+        class="flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 border backdrop-blur-sm group">
+        <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+        Kho Tài Liệu & AI
+    </Link>
 
-                             <div class="px-4 py-2 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer group">
-                                <NotificationBell class="w-full text-left" />
-                            </div>
-                        </div>
+    <Link :href="route('study.mistakes')" 
+        :class="route().current('study.mistakes') 
+            ? 'bg-rose-600/20 text-white shadow-[0_0_20px_rgba(225,29,72,0.3)] border-rose-500/50' 
+            : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'"
+        class="flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 border backdrop-blur-sm group">
+        <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Sửa Lỗi Sai
+    </Link>
+</div>
 
                         <!-- Group 2: ACADEMIC -->
                         <div class="space-y-2">
@@ -132,7 +146,7 @@ const openJoinModal = () => {
                                 </Link>
                             </template>
                         </div>
-
+                       
                         <!-- Group 3: SWITCHER -->
                         <div v-if="allTeams.length > 0" class="space-y-2 pt-4 border-t border-white/5">
                             <p class="px-4 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 font-mono">Lớp học của tôi </p>
@@ -243,6 +257,9 @@ const openJoinModal = () => {
                             <ResponsiveNavLink v-if="currentTeam" :href="route('teams.show', currentTeam)" :active="route().current('teams.show')">Settings</ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('questions.index')" :active="route().current('questions.index')">Question Bank</ResponsiveNavLink>
                         </template>
+                        <ResponsiveNavLink :href="route('study.mistakes')" :active="route().current('knowledge-base.*')" class="text-purple-400">
+    🤖 AI Assistant
+</ResponsiveNavLink>
                         <div class="border-t border-slate-800 my-2 pt-2"></div>
                          <form method="POST" @submit.prevent="logout">
                             <ResponsiveNavLink as="button" class="text-rose-400">Log Out</ResponsiveNavLink>

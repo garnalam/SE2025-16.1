@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-
 class AnalyticsController extends Controller
 {
     /**
@@ -333,4 +332,5 @@ public function gradebook(Request $request, Team $team)
         'isTeacher' => ($role !== 'student'),
     ]);
 }
+
 }
