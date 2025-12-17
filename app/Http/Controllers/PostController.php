@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Smalot\PdfParser\Parser;
 use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\Post;
@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Notification; // <--- THÊM DÒNG NÀY
 use App\Notifications\NewPostNotification;   // <--- THÊM DÒNG NÀY
 class PostController extends Controller
+
 {
     /**
      * Lưu một bài đăng mới (Text, Poll, Material, Assignment) vào chủ đề.
@@ -90,7 +91,7 @@ class PostController extends Controller
             
             // 5. Tạo bài đăng (Post)
             $post = $topic->posts()->create([
-                'content' => $validated['content'] ?? null, 
+                'content' => $validated['content'] ?? '', 
                 'team_id' => $team->id,
                 'user_id' => $request->user()->id,
                 'post_type' => $validated['post_type'],
@@ -106,16 +107,31 @@ class PostController extends Controller
                 foreach ($request->file('files') as $file) {
                     $path = $file->store('attachments', 'public'); 
                     
+                    // --- ĐOẠN MỚI: Tự động trích xuất Text cho AI ---
+                    $extractedText = null;
+                    try {
+                        // Chỉ đọc nếu là file PDF
+                        if ($file->getClientOriginalExtension() === 'pdf') {
+                            $parser = new Parser();
+                            $pdf = $parser->parseFile($file->getPathname());
+                            $extractedText = $pdf->getText();
+                        }
+                    } catch (\Exception $e) {
+                        // Nếu lỗi đọc file thì bỏ qua
+                    }
+                    // ------------------------------------------------
+
                     $post->attachments()->create([
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),
                         'mime_type' => $file->getClientMimeType(),
                         'size' => $file->getSize(),
+                        'extracted_content' => $extractedText, // <--- QUAN TRỌNG: Lưu nội dung vào đây
                     ]);
                 }
             }
             
-            // 7. Xử lý Poll Options (Giữ nguyên logic của bạn)
+            // 7. Xử lý Poll Options (Giữ nguyên DB::table('poll_options')->insert($pollOptionsData); của bạn)
             if ($validated['post_type'] === 'poll' && !empty($validated['poll_options'])) {
                 
                 $options = array_filter($validated['poll_options']);

@@ -1,5 +1,7 @@
 <?php
-
+use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\FollowerController; // <--- Đừng quên dòng này
+use App\Http\Controllers\GradebookController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -9,6 +11,7 @@ use Illuminate\Http\Request;
 use Laravel\Jetstream\Jetstream;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use App\Http\Controllers\AiStudyController; // <--- THÊM DÒNG NÀY
 
 // --- Imports Controllers ---
 use App\Http\Controllers\AttendanceController;
@@ -28,7 +31,6 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\QuestionImportController;
 use App\Http\Controllers\QuizTemplateController;
-use App\Http\Controllers\GradebookController;
 
 // --- Imports Models ---
 use App\Models\Submission;
@@ -61,7 +63,11 @@ Route::middleware([
     // ===== 1. DASHBOARD & TÀI NGUYÊN CƠ BẢN =====
     Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
-
+    Route::get('/user/profile', [UserProfileController::class, 'show'])->name('profile.show'); 
+Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('profile.public');
+// Route Follow & Unfollow (ĐÂY LÀ 2 ROUTE BẠN ĐANG THIẾU)
+    Route::post('/u/{user}/follow', [FollowerController::class, 'store'])->name('user.follow');
+    Route::delete('/u/{user}/unfollow', [FollowerController::class, 'destroy'])->name('user.unfollow');
     Route::get('/dashboard', function () {
         $user = Auth::user();
         $currentTeam = $user->currentTeam;
@@ -369,8 +375,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])->name('submissions.grade');
     Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])->name('submissions.downloadFile');
 });
+// GÓC HỌC TẬP
+
+Route::middleware(['auth:sanctum', 'verified'])->prefix('study')->group(function () {
+    
+    // 1. Góc Tài Liệu (Documents)
+    Route::get('/documents', [AiStudyController::class, 'indexDocuments'])->name('study.documents');
+    Route::post('/documents/upload', [AiStudyController::class, 'uploadDocument'])->name('study.documents.upload');
+    Route::post('/documents/chat', [AiStudyController::class, 'chatWithDocument'])->name('study.documents.chat');
+
+    // 2. Góc Sửa Lỗi (Mistakes)
+    Route::get('/mistakes', [AiStudyController::class, 'indexMistakes'])->name('study.mistakes');
+    Route::post('/mistakes/chat', [AiStudyController::class, 'chatWithMistake'])->name('study.mistakes.chat');
+});
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    // ... các route khác ...
     
     Route::get('/team/{team}/gradebook', [AnalyticsController::class, 'gradebook'])
         ->name('team.gradebook');

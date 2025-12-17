@@ -68,12 +68,19 @@ const passed = scorePercent >= 50;
                             </p>
 
                             <div class="flex justify-center gap-4">
-                                <Link :href="route('topics.show', attempt.post.topic_id)"
-                                      class="group relative inline-flex items-center justify-center px-8 py-3 font-bold text-white transition-all duration-200 bg-slate-800 font-exo rounded-xl hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 border border-slate-700">
-                                    <svg class="w-4 h-4 mr-2 text-slate-400 group-hover:text-white transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                    Return to Feed
-                                </Link>
-                            </div>
+    
+    <Link :href="route('topics.show', attempt.post.topic_id)"
+          class="group relative inline-flex items-center justify-center px-8 py-3 font-bold text-white transition-all duration-200 bg-slate-800 font-exo rounded-xl hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 border border-slate-700">
+        <svg class="w-4 h-4 mr-2 text-slate-400 group-hover:text-white transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        Return to Feed
+    </Link>
+
+    <Link :href="route('study.mistakes')"
+          class="group relative inline-flex items-center justify-center px-8 py-3 font-bold text-white transition-all duration-200 bg-purple-600 font-exo rounded-xl hover:bg-purple-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-900 border border-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.4)]">
+        <span class="mr-2 text-lg animate-pulse">👾</span>
+        Review with AI
+    </Link>
+    </div>
                         </div>
                     </div>
                 </div>

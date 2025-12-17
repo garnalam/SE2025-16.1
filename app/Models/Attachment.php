@@ -21,6 +21,7 @@ class Attachment extends Model
         'original_name',
         'mime_type',
         'size',
+        'extracted_content',
     ];
 
     /**
