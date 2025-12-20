@@ -1,19 +1,22 @@
 <?php
-use App\Http\Controllers\UserProfileController;
-use App\Http\Controllers\FollowerController; // <--- Đừng quên dòng này
-use App\Http\Controllers\GradebookController;
+
+use App\Http\Controllers\StudyCornerController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\DB; // Thêm DB để tính toán
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Laravel\Jetstream\Jetstream;
 use Inertia\Inertia;
 use Carbon\Carbon;
-use App\Http\Controllers\AiStudyController; // <--- THÊM DÒNG NÀY
 
 // --- Imports Controllers ---
+use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\FollowerController;
+use App\Http\Controllers\GradebookController;
+use App\Http\Controllers\AiStudyController;
+use App\Http\Controllers\SimulationGymController; // <--- [MỚI] Controller Luyện đề
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\QuestionController;
@@ -63,11 +66,13 @@ Route::middleware([
     // ===== 1. DASHBOARD & TÀI NGUYÊN CƠ BẢN =====
     Route::resource('subjects', SubjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
+    
+    // Profile & Follow
     Route::get('/user/profile', [UserProfileController::class, 'show'])->name('profile.show'); 
-Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('profile.public');
-// Route Follow & Unfollow (ĐÂY LÀ 2 ROUTE BẠN ĐANG THIẾU)
+    Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('profile.public');
     Route::post('/u/{user}/follow', [FollowerController::class, 'store'])->name('user.follow');
     Route::delete('/u/{user}/unfollow', [FollowerController::class, 'destroy'])->name('user.unfollow');
+
     Route::get('/dashboard', function () {
         $user = Auth::user();
         $currentTeam = $user->currentTeam;
@@ -85,10 +90,9 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
         if ($isTeacher) {
             return app(DashboardController::class)->index();
         } else {
-            // --- LOGIC DASHBOARD HỌC SINH (DATA THẬT) ---
+            // --- LOGIC DASHBOARD HỌC SINH ---
             $currentTeamId = $user->current_team_id;
 
-            // Nếu chưa chọn lớp, trả về rỗng
             if (!$currentTeamId) {
                 return Inertia::render('StudentDashboard', [
                     'taskCompletionData' => null,
@@ -99,15 +103,11 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
                 ]);
             }
 
-            // ====================================================
-            // 1. CHART: TASK COMPLETION (Đã nộp / Chờ / Quá hạn)
-            // ====================================================
-            // Lấy tất cả bài tập/quiz của lớp hiện tại
+            // 1. Chart Task Completion
             $allAssignments = Post::where('team_id', $currentTeamId)
                 ->whereIn('post_type', ['assignment', 'quiz'])
                 ->get();
 
-            // Lấy các bài đã nộp của user này
             $mySubmissions = Submission::where('user_id', $user->id)
                 ->whereIn('post_id', $allAssignments->pluck('id'))
                 ->pluck('post_id')
@@ -119,7 +119,6 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
             $now = Carbon::now();
 
             foreach ($allAssignments as $post) {
-                // Nếu chưa nộp
                 if (!in_array($post->id, $mySubmissions)) {
                     if ($post->due_date && $now->gt($post->due_date)) {
                         $overdueCount++;
@@ -132,31 +131,27 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
             $taskCompletionData = [
                 'labels' => ['Đã nộp', 'Đang chờ', 'Quá hạn'],
                 'datasets' => [[
-                    'backgroundColor' => ['#10b981', '#3b82f6', '#f43f5e'], // Emerald, Blue, Rose
+                    'backgroundColor' => ['#10b981', '#3b82f6', '#f43f5e'],
                     'borderWidth' => 0,
                     'data' => [$completedCount, $pendingCount, $overdueCount]
                 ]]
             ];
 
-            // ====================================================
-            // 2. CHART: PERFORMANCE TRAJECTORY (Lịch sử điểm số)
-            // ====================================================
-            // Lấy 10 bài nộp gần nhất đã được chấm điểm
+            // 2. Chart Performance
             $gradedSubmissions = Submission::where('user_id', $user->id)
                 ->whereNotNull('grade')
                 ->whereHas('post', function ($q) use ($currentTeamId) {
                     $q->where('team_id', $currentTeamId);
                 })
                 ->with('post:id,title,max_points')
-                ->latest('updated_at') // Lấy theo thời gian chấm gần nhất
+                ->latest('updated_at')
                 ->take(10)
                 ->get()
-                ->reverse() // Đảo ngược để hiển thị cũ -> mới trên biểu đồ
+                ->reverse()
                 ->values();
 
             $performanceLabels = $gradedSubmissions->map(fn($sub) => \Illuminate\Support\Str::limit($sub->post->title, 10));
             
-            // Quy đổi ra thang điểm 100 để vẽ biểu đồ cho đều
             $performanceData = $gradedSubmissions->map(function($sub) {
                 if ($sub->post->max_points > 0) {
                     return round(($sub->grade / $sub->post->max_points) * 100, 1);
@@ -168,7 +163,7 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
                 'labels' => $performanceLabels,
                 'datasets' => [[
                     'label' => 'Hiệu suất (%)',
-                    'borderColor' => '#8b5cf6', // Violet
+                    'borderColor' => '#8b5cf6',
                     'backgroundColor' => 'rgba(139, 92, 246, 0.1)',
                     'data' => $performanceData,
                     'fill' => true,
@@ -178,16 +173,13 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
                 ]]
             ];
 
-            // ====================================================
-            // 3. CHART: QUIZ ANALYTICS (Tôi vs Trung bình lớp)
-            // ====================================================
-            // Lấy 5 bài Quiz gần nhất của lớp
+            // 3. Chart Quiz Analytics
             $recentQuizzes = Post::where('team_id', $currentTeamId)
                 ->where('post_type', 'quiz')
                 ->latest()
                 ->take(5)
                 ->get()
-                ->reverse(); // Cũ -> Mới
+                ->reverse();
 
             $quizLabels = [];
             $myScores = [];
@@ -196,12 +188,10 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
             foreach ($recentQuizzes as $quiz) {
                 $quizLabels[] = \Illuminate\Support\Str::limit($quiz->title, 10);
                 
-                // Điểm của tôi (quy đổi %)
                 $mySub = Submission::where('user_id', $user->id)->where('post_id', $quiz->id)->first();
                 $myScoreVal = ($mySub && $quiz->max_points > 0) ? round(($mySub->grade / $quiz->max_points) * 100) : 0;
                 $myScores[] = $myScoreVal;
 
-                // Điểm trung bình lớp (quy đổi %)
                 $avgGrade = Submission::where('post_id', $quiz->id)->whereNotNull('grade')->avg('grade');
                 $avgScoreVal = ($avgGrade && $quiz->max_points > 0) ? round(($avgGrade / $quiz->max_points) * 100) : 0;
                 $classAvgScores[] = $avgScoreVal;
@@ -212,14 +202,14 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
                 'datasets' => [
                     [
                         'label' => 'Tôi',
-                        'backgroundColor' => '#06b6d4', // Cyan
+                        'backgroundColor' => '#06b6d4',
                         'data' => $myScores,
                         'borderRadius' => 4,
                         'barPercentage' => 0.6,
                     ],
                     [
                         'label' => 'TB Lớp',
-                        'backgroundColor' => '#64748b', // Slate
+                        'backgroundColor' => '#64748b',
                         'data' => $classAvgScores,
                         'borderRadius' => 4,
                         'barPercentage' => 0.6,
@@ -227,9 +217,7 @@ Route::get('/u/{user}', [UserProfileController::class, 'publicProfile'])->name('
                 ]
             ];
 
-            // ====================================================
-            // DỮ LIỆU DANH SÁCH (Giữ nguyên logic cũ)
-            // ====================================================
+            // Data Lists
             $upcomingAssignments = Post::where('post_type', 'assignment')
                 ->where('team_id', $currentTeamId)
                 ->where('due_date', '>=', Carbon::now())
@@ -375,23 +363,65 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/submissions/{submission}/grade', [SubmissionController::class, 'grade'])->name('submissions.grade');
     Route::get('/submissions/file/{submission_file}', [SubmissionController::class, 'downloadFile'])->name('submissions.downloadFile');
 });
-// GÓC HỌC TẬP
+
+// ==========================================
+// 8. GÓC HỌC TẬP & PHÒNG GYM (STUDENT SPACE)
+// ==========================================
 
 Route::middleware(['auth:sanctum', 'verified'])->prefix('study')->group(function () {
     
-    // 1. Góc Tài Liệu (Documents)
+    // Góc Tài Liệu (Documents)
     Route::get('/documents', [AiStudyController::class, 'indexDocuments'])->name('study.documents');
     Route::post('/documents/upload', [AiStudyController::class, 'uploadDocument'])->name('study.documents.upload');
     Route::post('/documents/chat', [AiStudyController::class, 'chatWithDocument'])->name('study.documents.chat');
 
-    // 2. Góc Sửa Lỗi (Mistakes)
+    // Góc Sửa Lỗi (Mistakes) - AI Study
     Route::get('/mistakes', [AiStudyController::class, 'indexMistakes'])->name('study.mistakes');
     Route::post('/mistakes/chat', [AiStudyController::class, 'chatWithMistake'])->name('study.mistakes.chat');
 });
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+
+// 🔥 SIMULATION GYM (PHÒNG LUYỆN ĐỀ) 🔥
+Route::middleware(['auth:sanctum', 'verified'])->prefix('gym')->group(function () {
+    // Dashboard Gym
+    Route::get('/', [SimulationGymController::class, 'index'])->name('gym.index');
     
-    Route::get('/team/{team}/gradebook', [AnalyticsController::class, 'gradebook'])
-        ->name('team.gradebook');
+    // API Game Logic (Gọi từ Vue)
+    Route::prefix('api')->group(function () {
+        Route::post('/start', [SimulationGymController::class, 'startSession'])->name('gym.start');
+        Route::post('/submit', [SimulationGymController::class, 'submitAnswer'])->name('gym.submit');
+        Route::post('/finish', [SimulationGymController::class, 'finishSession'])->name('gym.finish');
+    });
+});
+
+// ===== 9. SỔ ĐIỂM (GRADEBOOK) =====
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/team/{team}/gradebook', [GradebookController::class, 'index'])->name('gradebook.index');
     Route::post('/team/{team}/gradebook/settings', [GradebookController::class, 'updateSettings'])->name('gradebook.updateSettings');
 });
+
+// ==========================================
+// 10. GÓC HỌC TẬP (MEMORY SHARDS)
+// ==========================================
+
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    
+    // Group các route liên quan đến Memory Shards của một Team cụ thể
+    // URL sẽ có dạng: /team/1/memory-shards
+    Route::prefix('team/{teamId}/memory-shards')->name('memory-shards.')->group(function () {
+        
+        // Dashboard Góc học tập
+        Route::get('/', [StudyCornerController::class, 'index'])->name('index');
+
+        // Upload tài liệu
+        Route::post('/upload', [StudyCornerController::class, 'uploadDocument'])->name('upload');
+
+        // Lưu Notebook (Vở ghi / Excel)
+        Route::post('/notebook/save', [StudyCornerController::class, 'storeNotebook'])->name('notebook.save');
+    });
+
+    // Route lưu vết vẽ (Annotation) - Tách riêng để code gọn hơn
+    Route::post('/memory-shards/annotation/{documentId}', [StudyCornerController::class, 'saveAnnotation'])
+        ->name('memory-shards.annotation.save');
+
+});
+

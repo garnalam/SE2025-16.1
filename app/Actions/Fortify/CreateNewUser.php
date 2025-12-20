@@ -46,9 +46,9 @@ class CreateNewUser implements CreatesNewUsers
                 
                 // --- LOGIC ĐIỀU KIỆN QUAN TRỌNG ---
                 // Chỉ tạo Team nếu role là 'teacher' VÀ dự án có bật tính năng Teams
-                if ($user->role === 'teacher' && Jetstream::hasTeamFeatures()) {
-                    $this->createTeam($user);
-                }
+                // if ($user->role === 'teacher' && Jetstream::hasTeamFeatures()) {
+                //     $this->createTeam($user);
+                // }
                 // --- HẾT PHẦN LOGIC ---
 
             });

@@ -17,7 +17,7 @@ const form = useForm({
     _method: 'PUT',
     name: props.user.name,
     email: props.user.email,
-    bio: props.user.bio || '', // <--- QUAN TRỌNG: Khởi tạo giá trị Bio từ database
+    bio: props.user.bio || '',
     photo: null,
 });
 
@@ -47,15 +47,11 @@ const selectNewPhoto = () => {
 
 const updatePhotoPreview = () => {
     const photo = photoInput.value.files[0];
-
     if (! photo) return;
-
     const reader = new FileReader();
-
     reader.onload = (e) => {
         photoPreview.value = e.target.result;
     };
-
     reader.readAsDataURL(photo);
 };
 
@@ -79,119 +75,88 @@ const clearPhotoFileInput = () => {
 <template>
     <FormSection @submitted="updateProfileInformation">
         <template #title>
-            Thông tin hồ sơ
+            <span class="text-white font-exo uppercase tracking-wide">Thông tin người dùng</span>
         </template>
 
         <template #description>
-            Cập nhật thông tin tài khoản và địa chỉ email của bạn.
+            <span class="text-slate-400">Khu vực cập nhật avatar, bio, tên của người dùng </span>
         </template>
 
         <template #form>
+            <!-- Profile Photo -->
             <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
-                <input
-                    id="photo"
-                    ref="photoInput"
-                    type="file"
-                    class="hidden"
-                    @change="updatePhotoPreview"
-                >
+                <input id="photo" ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview">
+                <InputLabel for="photo" value="Avatar" />
 
-                <InputLabel for="photo" value="Ảnh đại diện" />
+                <div class="flex items-center gap-6 mt-2">
+                    <div v-show="!photoPreview" class="relative group">
+                        <img :src="user.profile_photo_url" :alt="user.name" class="rounded-xl h-20 w-20 object-cover border-2 border-slate-700 shadow-lg group-hover:border-cyan-500 transition-colors">
+                        <div class="absolute inset-0 bg-cyan-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition"></div>
+                    </div>
 
-                <div v-show="! photoPreview" class="mt-2">
-                    <img :src="user.profile_photo_url" :alt="user.name" class="rounded-full h-20 w-20 object-cover border-2 border-slate-600">
+                    <div v-show="photoPreview" class="relative">
+                        <span class="block rounded-xl h-20 w-20 bg-cover bg-no-repeat bg-center border-2 border-cyan-500 shadow-[0_0_15px_cyan]"
+                              :style="'background-image: url(\'' + photoPreview + '\');'" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <SecondaryButton class="!text-[10px] !py-2 !bg-slate-800 !border-slate-600 hover:!border-cyan-500" type="button" @click.prevent="selectNewPhoto">
+                            Select New Image
+                        </SecondaryButton>
+
+                        <button v-if="user.profile_photo_path" type="button" class="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest text-left" @click.prevent="deletePhoto">
+                            Remove Avatar
+                        </button>
+                    </div>
                 </div>
-
-                <div v-show="photoPreview" class="mt-2">
-                    <span
-                        class="block rounded-full h-20 w-20 bg-cover bg-no-repeat bg-center border-2 border-cyan-500"
-                        :style="'background-image: url(\'' + photoPreview + '\');'"
-                    />
-                </div>
-
-                <SecondaryButton class="mt-2 me-2 !text-xs" type="button" @click.prevent="selectNewPhoto">
-                    Chọn ảnh mới
-                </SecondaryButton>
-
-                <SecondaryButton
-                    v-if="user.profile_photo_path"
-                    type="button"
-                    class="mt-2 !text-xs !text-rose-400"
-                    @click.prevent="deletePhoto"
-                >
-                    Xóa ảnh
-                </SecondaryButton>
-
                 <InputError :message="form.errors.photo" class="mt-2" />
             </div>
 
+            <!-- Name -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Họ và tên" />
-                <TextInput
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="name"
-                />
+                <InputLabel for="name" value="Tên người dùng" />
+                <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full bg-slate-900 border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/20 text-white font-exo" required autocomplete="name" />
                 <InputError :message="form.errors.name" class="mt-2" />
             </div>
 
+            <!-- Email -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="email" value="Email" />
-                <TextInput
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="username"
-                />
+                <InputLabel for="email" value="Email người dùng" />
+                <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full bg-slate-900 border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/20 text-white font-mono text-sm" required autocomplete="username" />
                 <InputError :message="form.errors.email" class="mt-2" />
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
-                    <p class="text-sm mt-2 text-slate-400">
-                        Email của bạn chưa được xác thực.
-
-                        <Link
-                            :href="route('verification.send')"
-                            method="post"
-                            as="button"
-                            class="underline text-sm text-cyan-400 hover:text-cyan-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            @click.prevent="sendEmailVerification"
-                        >
-                            Ấn vào đây để gửi lại email xác thực.
+                    <p class="text-sm mt-2 text-rose-400 font-mono">
+                        >> EMAIL UNVERIFIED.
+                        <Link :href="route('verification.send')" method="post" as="button" class="underline text-cyan-400 hover:text-cyan-300 ml-1">
+                            Resend verification signal.
                         </Link>
                     </p>
-
-                    <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-emerald-400">
-                        Một liên kết xác thực mới đã được gửi đến email của bạn.
+                    <div v-show="verificationLinkSent" class="mt-2 font-bold text-xs text-emerald-400 font-mono">
+                        >> NEW LINK DISPATCHED TO INBOX.
                     </div>
                 </div>
             </div>
 
+            <!-- Bio -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="bio" value="Bio / Giới thiệu ngắn" />
+                <InputLabel for="bio" value="Hồ sơ người dùng" />
                 <textarea
                     id="bio"
                     v-model="form.bio"
-                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm bg-[#020617] text-white border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/50" 
-                    rows="3"
-                    placeholder="Viết đôi dòng về bản thân bạn..."
+                    class="mt-1 block w-full bg-slate-900 border-slate-700 text-slate-300 focus:border-cyan-500 focus:ring-cyan-500/20 rounded-xl shadow-sm text-sm font-sans p-3 min-h-[100px]"
+                    placeholder="Describe your skillset..."
                 ></textarea>
                 <InputError :message="form.errors.bio" class="mt-2" />
             </div>
-
         </template>
 
         <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3 text-emerald-400">
-                Đã lưu.
+            <ActionMessage :on="form.recentlySuccessful" class="me-3 text-emerald-400 font-mono text-xs uppercase tracking-widest">
+                Update Complete
             </ActionMessage>
-
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Lưu thay đổi
+                Save Profile
             </PrimaryButton>
         </template>
     </FormSection>

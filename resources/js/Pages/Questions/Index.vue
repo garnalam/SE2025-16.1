@@ -65,21 +65,37 @@ const handleFileUpload = (event) => {
 };
 
 const generateQuestions = async () => {
+    // 1. Kiểm tra dữ liệu đầu vào
     if (aiForm.documents.length === 0 || !aiForm.subject_id) {
-        alert('Missing critical data: Subject and Source Files required.');
+        alert('Vui lòng chọn Môn học và Tải lên ít nhất 1 tài liệu.');
         return;
     }
 
     isGenerating.value = true;
     const formData = new FormData();
+
+    // 2. Gắn file tài liệu
     aiForm.documents.forEach((file, index) => {
         formData.append(`documents[${index}]`, file);
     });
+
+    // 3. Gắn các trường cơ bản
     formData.append('number_of_questions', aiForm.number_of_questions);
-    formData.append('subject_id', aiForm.subject_id); 
+    formData.append('subject_id', aiForm.subject_id);
+
+    // [FIX 1] GẮN DỮ LIỆU TAGS (QUAN TRỌNG)
+    // Vì tags là mảng object, ta cần map lấy ID hoặc gửi từng cái
+    aiForm.tags.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag.id); // Chỉ gửi ID của tag
+    });
+
+    // [FIX 2] GẮN CUSTOM INSTRUCTIONS
     if (aiForm.custom_instructions) {
         formData.append('custom_instructions', aiForm.custom_instructions);
     }
+    
+    // [FIX 3 - TÙY CHỌN] NẾU BACKEND CẦN 'TOPIC', BẠN PHẢI THÊM NÓ VÀO FORM
+    // formData.append('topic', 'Chủ đề gì đó...'); 
 
     try {
         const response = await axios.post(route('questions.generate-ai'), formData, {
@@ -89,7 +105,15 @@ const generateQuestions = async () => {
         aiStep.value = 2; 
     } catch (error) {
         console.error(error);
-        alert('System Error: ' + (error.response?.data?.error || 'AI Generation Failed.'));
+        // Hiển thị lỗi chi tiết từ Backend trả về
+        if (error.response && error.response.status === 422) {
+            const errors = error.response.data.errors;
+            // Lấy lỗi đầu tiên để hiển thị alert
+            const firstError = Object.values(errors)[0][0];
+            alert('Lỗi dữ liệu: ' + firstError);
+        } else {
+            alert('Lỗi hệ thống: ' + (error.response?.data?.message || 'Không thể tạo câu hỏi.'));
+        }
     } finally {
         isGenerating.value = false;
     }

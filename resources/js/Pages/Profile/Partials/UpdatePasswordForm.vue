@@ -40,11 +40,11 @@ const updatePassword = () => {
 <template>
     <FormSection @submitted="updatePassword">
         <template #title>
-            Update Password
+            Cập nhật mật khẩu
         </template>
 
         <template #description>
-            Ensure your account is using a long, random password to stay secure.
+            Hãy đảm bảo mật khẩu của bạn đủ độ dài từ 8 ký tự trở lên để giữ an toàn
         </template>
 
         <template #form>
