@@ -11,6 +11,7 @@ import Checkbox from '@/Components/Checkbox.vue';
 import VueMultiselect from 'vue-multiselect';
 import Pagination from '@/Components/Pagination.vue'; 
 import ActionMessage from '@/Components/ActionMessage.vue'; 
+import MathRender from '@/Components/MathRender.vue'; // <--- THÊM DÒNG NÀY
 
 // --- 1. NHẬN TẤT CẢ PROPS TỪ CONTROLLER ---
 const props = defineProps({
@@ -176,11 +177,179 @@ const deleteTemplate = (id) => {
             </h2>
         </template>
 
+<<<<<<< Updated upstream
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <Link :href="route('topics.show', post.topic_id)" class="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">
                     &larr; Quay lại Topic
                 </Link>
+=======
+        <div class="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div v-if="$page.props.flash.success" class="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl flex items-center gap-3">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                <span class="text-sm font-mono font-bold">{{ $page.props.flash.success }}</span>
+            </div>
+            
+            <div v-if="$page.props.errors && Object.keys($page.props.errors).length > 0" class="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl">
+                <p class="font-bold text-sm font-exo uppercase mb-2">System Errors Detected:</p>
+                <ul class="list-disc list-inside text-xs font-mono">
+                    <li v-for="(error, key) in $page.props.errors" :key="key">{{ error }}</li>
+                </ul>
+            </div>
+
+            <!-- TAB NAVIGATION -->
+            <div class="mb-8 border-b border-slate-800">
+                <nav class="-mb-px flex space-x-8">
+                    <button
+                        @click="currentTab = 'manual'"
+                        :class="[currentTab === 'manual' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-500 hover:text-slate-300 hover:border-slate-700']"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm uppercase tracking-wider font-exo transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                        1. Cài đặt chung
+                    </button>
+                    <button
+                        @click="currentTab = 'random'"
+                        :class="[currentTab === 'random' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-500 hover:text-slate-300 hover:border-slate-700']"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm uppercase tracking-wider font-exo transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        2. Cài đặt nâng cao
+                    </button>
+                </nav>
+            </div>
+
+            <!-- TAB 1: MANUAL -->
+            <div v-if="currentTab === 'manual'" class="space-y-8 animate-fade-in-up"> 
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+                    
+                    <!-- Left: Current Quiz Questions -->
+                    <div class="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-[600px]">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2 flex justify-between items-center">
+                            <span>Câu hỏi đã thêm ({{ quizQuestions.length }})</span>
+                            <span class="text-[10px] font-mono text-cyan-500">READY_STATE</span>
+                        </h3>
+                        <ul class="space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-2">
+                            <li v-if="quizQuestions.length === 0" class="py-12 text-center border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+                                <div class="text-slate-500 font-mono text-xs">>> NO MODULES MOUNTED.</div>
+                            </li>
+                            <li v-for="question in quizQuestions" :key="'quiz-' + question.id" class="group flex items-start justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-600 transition">
+                                <div class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">
+                                    <MathRender :content="question.question_text" />
+                                </div>
+                                <Link as="button" method="delete" :data="{ question_id: question.id }" :href="route('post.quiz.detach', post.id)" class="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition" preserve-scroll title="Detach">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Right: Question Bank -->
+                    <div class="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-[600px]">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2 flex justify-between items-center">
+                            <span>Ngân hàng câu hỏi</span>
+                            <span class="text-[10px] font-mono text-slate-500">{{ availableQuestions.total }} CÂU HỎI ĐƯỢC TÌM THẤY</span>
+                        </h3>
+
+                        <div class="space-y-3 mb-4 bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                            <VueMultiselect v-model="manualFilterForm.filter_subject" :options="props.subjects" label="name" track-by="id" placeholder="Lọc theo môn học..." class="custom-multiselect" />
+                            <VueMultiselect v-model="manualFilterForm.filter_tags" :options="props.tags" :multiple="true" label="name" track-by="id" placeholder="Lọc theo nhãn..." class="custom-multiselect" />
+                            <TextInput v-model="manualFilterForm.filter_search" type="text" class="w-full text-xs font-mono bg-slate-950 border-slate-700" placeholder="Tìm câu hỏi theo tên..." />
+                        </div>
+
+                        <ul class="space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-2">
+                            <li v-if="availableQuestions.data.length === 0" class="py-12 text-center text-slate-500 font-mono text-xs">
+                                >> QUERY RETURNED 0 RESULTS.
+                            </li>
+                            <li v-for="question in availableQuestions.data" :key="'bank-' + question.id" class="group flex items-start justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/30 transition">
+                                <div class="flex-1 pr-4">
+                                    <div class="mb-2 flex flex-wrap gap-1">
+                                        <span v-if="question.subject" class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-indigo-900/30 text-indigo-400 border border-indigo-500/20 rounded">{{ question.subject.name }}</span>
+                                        <span v-for="tag in question.tags" :key="tag.id" class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 rounded">{{ tag.name }}</span>
+                                    </div>
+                                    <div class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">
+                                        <MathRender :content="question.question_text" />
+                                    </div>
+                                    <img v-if="question.image_path" :src="'/storage/' + question.image_path" class="mt-2 w-full max-w-[100px] h-auto rounded border border-slate-700 opacity-70">
+                                </div>
+                                <Link as="button" method="post" :data="{ question_id: question.id }" :href="route('post.quiz.attach', post.id)" class="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition border border-emerald-500/20" preserve-scroll title="Attach">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                </Link>
+                            </li>
+                        </ul>
+                        
+                        <div class="pt-4 border-t border-slate-800">
+                            <Pagination :links="availableQuestions.links" />
+                        </div>
+                    </div>
+                </div>
+
+                <form @submit.prevent="submitManualSettings" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-white font-exo flex items-center gap-2 mb-4">
+                            <span class="w-1.5 h-6 bg-cyan-500 rounded-full"></span> Configuration
+                        </h3>
+                        <label class="flex items-center p-3 bg-black/20 rounded-xl border border-white/5 hover:bg-black/30 transition cursor-pointer">
+                            <Checkbox v-model:checked="manualSettingsForm.settings.shuffle" class="text-cyan-500 focus:ring-cyan-500" />
+                            <span class="ms-3 text-sm text-slate-300 font-bold">ĐẢO CÂU HỎI </span>
+                        </label>
+                    </div>
+
+                    <div class="p-4 bg-rose-900/10 border border-rose-500/20 rounded-xl">
+                        <label class="flex items-center cursor-pointer">
+                            <Checkbox v-model:checked="manualSettingsForm.settings.is_proctored" class="text-rose-500 focus:ring-rose-500" />
+                            <span class="ml-3 text-sm text-rose-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                BẬT CHẾ ĐỘ GIÁM SÁT BÀI THI
+                            </span>
+                        </label>
+                        <p class="text-[10px] text-rose-300/60 ml-8 mt-1 font-mono uppercase">
+                            Ngăn chặn việc ALT + TAB hoặc chuyển đổi cửa sổ trong suốt thời gian làm bài thi.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-white font-exo flex items-center gap-2 mb-4">
+                            <span class="w-1.5 h-6 bg-indigo-500 rounded-full"></span> ĐỐI TƯỢNG LÀM BÀI
+                        </h3>
+                        <div class="space-y-2 mb-4">
+                            <label class="flex items-center cursor-pointer p-3 bg-black/20 rounded-xl border border-white/5 hover:border-indigo-500/50 transition" :class="{'border-indigo-500 bg-indigo-500/10': manualSettingsForm.assignment.assign_mode === 'all'}">
+                                <input type="radio" v-model="manualSettingsForm.assignment.assign_mode" value="all" class="form-radio text-indigo-500 bg-slate-900 border-slate-600 focus:ring-indigo-500">
+                                <span class="ms-3 text-sm text-slate-300">Cả lớp ({{ students.length }} thành viên)</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer p-3 bg-black/20 rounded-xl border border-white/5 hover:border-indigo-500/50 transition" :class="{'border-indigo-500 bg-indigo-500/10': manualSettingsForm.assignment.assign_mode === 'specific'}">
+                                <input type="radio" v-model="manualSettingsForm.assignment.assign_mode" value="specific" class="form-radio text-indigo-500 bg-slate-900 border-slate-600 focus:ring-indigo-500">
+                                <span class="ms-3 text-sm text-slate-300">Chỉ định học sinh</span>
+                            </label>
+                        </div>
+                        <div v-if="manualSettingsForm.assignment.assign_mode === 'specific'">
+                            <VueMultiselect
+                                v-model="manualSettingsForm.assignment.assigned_users"
+                                :options="props.students"
+                                :multiple="true"
+                                label="name" track-by="id"
+                                placeholder="Chọn học sinh..."
+                                class="custom-multiselect"
+                            />
+                            <InputError :message="manualSettingsForm.errors['assignment.assigned_users']" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end items-center pt-4 border-t border-slate-800">
+                        <ActionMessage :on="manualSettingsForm.recentlySuccessful" class="me-4 text-emerald-400 font-mono text-xs uppercase tracking-widest">
+                            CẤU HÌNH ĐÃ LƯU!
+                        </ActionMessage>
+                        <PrimaryButton :class="{ 'opacity-25': manualSettingsForm.processing }" :disabled="manualSettingsForm.processing">
+                            HOÀN TẤT
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB 2: RANDOM -->
+            <div v-if="currentTab === 'random'" class="space-y-8 animate-fade-in-up">
+>>>>>>> Stashed changes
                 
                 <div v-if="$page.props.flash.success" class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
                     {{ $page.props.flash.success }}

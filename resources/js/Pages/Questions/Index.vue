@@ -10,8 +10,14 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+<<<<<<< Updated upstream
 import axios from 'axios'; // Dùng axios để gọi API AI mà không reload trang
 // 2. Nhận props mới từ controller
+=======
+import axios from 'axios'; 
+import MathRender from '@/Components/MathRender.vue'; // <--- THÊM DÒNG NÀY
+
+>>>>>>> Stashed changes
 const props = defineProps({
     questions: Object, // Đây là object phân trang
     subjects: Array,
@@ -76,13 +82,19 @@ const handleFileUpload = (event) => {
 
 // Gửi file lên server để AI xử lý
 const generateQuestions = async () => {
+    // 1. Kiểm tra dữ liệu đầu vào
     if (aiForm.documents.length === 0 || !aiForm.subject_id) {
+<<<<<<< Updated upstream
         alert('Vui lòng chọn ít nhất 1 file và môn học!');
+=======
+        alert('Vui lòng chọn Môn học và Tải lên ít nhất 1 tài liệu.');
+>>>>>>> Stashed changes
         return;
     }
 
     isGenerating.value = true;
     const formData = new FormData();
+<<<<<<< Updated upstream
     
     // Duyệt mảng file và append từng cái vào formData
     aiForm.documents.forEach((file, index) => {
@@ -93,9 +105,31 @@ const generateQuestions = async () => {
     formData.append('subject_id', aiForm.subject_id); // Gửi thêm cái này nếu cần validate backend chặt chẽ
     
     // Gửi yêu cầu riêng
+=======
+
+    // 2. Gắn file tài liệu
+    aiForm.documents.forEach((file, index) => {
+        formData.append(`documents[${index}]`, file);
+    });
+
+    // 3. Gắn các trường cơ bản
+    formData.append('number_of_questions', aiForm.number_of_questions);
+    formData.append('subject_id', aiForm.subject_id);
+
+    // [FIX 1] GẮN DỮ LIỆU TAGS (QUAN TRỌNG)
+    // Vì tags là mảng object, ta cần map lấy ID hoặc gửi từng cái
+    aiForm.tags.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag.id); // Chỉ gửi ID của tag
+    });
+
+    // [FIX 2] GẮN CUSTOM INSTRUCTIONS
+>>>>>>> Stashed changes
     if (aiForm.custom_instructions) {
         formData.append('custom_instructions', aiForm.custom_instructions);
     }
+    
+    // [FIX 3 - TÙY CHỌN] NẾU BACKEND CẦN 'TOPIC', BẠN PHẢI THÊM NÓ VÀO FORM
+    // formData.append('topic', 'Chủ đề gì đó...'); 
 
     try {
         const response = await axios.post(route('questions.generate-ai'), formData, {
@@ -105,7 +139,19 @@ const generateQuestions = async () => {
         aiStep.value = 2; 
     } catch (error) {
         console.error(error);
+<<<<<<< Updated upstream
         alert('Lỗi: ' + (error.response?.data?.error || 'Không thể tạo câu hỏi.'));
+=======
+        // Hiển thị lỗi chi tiết từ Backend trả về
+        if (error.response && error.response.status === 422) {
+            const errors = error.response.data.errors;
+            // Lấy lỗi đầu tiên để hiển thị alert
+            const firstError = Object.values(errors)[0][0];
+            alert('Lỗi dữ liệu: ' + firstError);
+        } else {
+            alert('Lỗi hệ thống: ' + (error.response?.data?.message || 'Không thể tạo câu hỏi.'));
+        }
+>>>>>>> Stashed changes
     } finally {
         isGenerating.value = false;
     }
@@ -332,6 +378,7 @@ const saveGeneratedQuestions = () => {
                                 </span>
                             </div>
 
+<<<<<<< Updated upstream
                             <div class="flex justify-between items-center">
                                 <div class="flex-1">
                                     <p class="font-semibold text-gray-900">{{ question.question_text }}</p>
@@ -363,6 +410,20 @@ const saveGeneratedQuestions = () => {
                                     >
                                         Xóa
                                     </button>
+=======
+                            <div class="mb-3 font-bold text-slate-200 font-exo text-sm">
+                                <MathRender :content="question.question_text" />
+                            </div>
+                            
+                            <img v-if="question.image_url" :src="question.image_url" class="mb-3 w-32 h-auto rounded border border-slate-700 object-contain bg-black/20">                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div v-for="option in question.options" :key="option.id"
+                                    class="flex items-center gap-2 text-xs font-mono p-2 rounded"
+                                    :class="option.is_correct ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-950 border border-slate-800 text-slate-500'">
+                                    <div class="w-1.5 h-1.5 rounded-full shrink-0" :class="option.is_correct ? 'bg-emerald-500' : 'bg-slate-700'"></div>
+                                    
+                                    <MathRender :content="option.option_text" /> 
+>>>>>>> Stashed changes
                                 </div>
                             </div>
                         </li>
