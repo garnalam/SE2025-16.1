@@ -31,7 +31,7 @@ const updateTeamName = () => {
 
         <form @submit.prevent="updateTeamName" class="relative z-10 flex flex-col lg:flex-row items-center gap-8">
             
-            <!-- 1. Identity Module (Avatar) -->
+            <!-- 1. Thông tin người dùng (Avatar) -->
             <div class="flex-shrink-0 flex flex-col items-center gap-3">
                 <div class="relative group">
                     <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500"></div>
