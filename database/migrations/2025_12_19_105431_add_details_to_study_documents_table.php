@@ -13,10 +13,13 @@ return new class extends Migration
     {
         Schema::table('study_documents', function (Blueprint $table) {
             // Thêm cột loại file (sau cột file_path cho đẹp)
-            $table->string('file_type')->default('pdf')->after('file_path');
+            if (!Schema::hasColumn('study_documents', 'file_type')) {
+                $table->string('file_type')->default('pdf')->after('file_path');
+            }
             
-            // Thêm cột đánh dấu tài liệu giáo viên
-            $table->boolean('is_teacher_resource')->default(false)->after('file_type');
+            if (!Schema::hasColumn('study_documents', 'is_teacher_resource')) {
+                $table->boolean('is_teacher_resource')->default(false)->after('file_type');
+            }
         });
     }
 

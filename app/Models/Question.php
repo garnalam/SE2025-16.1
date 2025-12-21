@@ -3,10 +3,17 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage; // <--- Thêm dòng này
 
 class Question extends Model {
     use HasFactory;
     protected $guarded = [];
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute()
+    {
+        return $this->image_path ? asset('storage/' . $this->image_path) : null;
+    }
 
     // Giáo viên sở hữu câu hỏi này
     public function user() {

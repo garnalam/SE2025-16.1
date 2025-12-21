@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3'; // Thêm router
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
@@ -29,19 +29,46 @@ const form = useForm({
     correct_option: correctIndex,
     subject_id: props.question.subject, 
     tags: props.question.tags,
+    image: null, // Thêm trường này để chứa file ảnh mới nếu người dùng chọn
 });
+
+function getImagePreview(file) {
+    return file ? URL.createObjectURL(file) : null;
+}
 
 function addOption() { form.options.push({ text: '' }); }
 function removeOption(index) { if (form.options.length > 2) { form.options.splice(index, 1); } }
 
 function submitForm() {
+    const optionTexts = form.options.map(o => o.text.trim());
+    const uniqueTexts = new Set(optionTexts);
+    
+    if (uniqueTexts.size !== optionTexts.length) {
+        form.setError('options', 'Các đáp án không được giống nhau.');
+        return;
+    }
     const payload = {
-        ...form.data(),
+        _method: 'PUT', 
+        question_text: form.question_text,
+        correct_option: form.correct_option,
         subject_id: form.subject_id ? form.subject_id.id : null,
         tags: form.tags.map(tag => tag.id),
+        options: form.options,
+        image: form.image, // File ảnh mới (nếu có)
     };
 
-    useForm(payload).put(route('questions.update', props.question.id));
+    router.post(route('questions.update', props.question.id), payload, {
+        forceFormData: true, // Crucial for file uploads
+        preserveScroll: true,
+        onSuccess: () => {
+            // Optional: Handle success
+        },
+        onError: (errors) => {
+            // Map errors back to the form object if needed for display
+            form.errors = errors;
+        }
+    });
+
 }
 </script>
 
@@ -91,6 +118,31 @@ function submitForm() {
                             />
                             <InputError :message="form.errors.tags" class="mt-2" />
                         </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <InputLabel value="Ảnh minh họa (Tùy chọn)" />
+                        <div class="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-700 border-dashed rounded-xl hover:border-indigo-500 transition-colors bg-slate-900/50 group">
+                            <div class="space-y-1 text-center">
+                                
+                                <svg v-if="!question.image_url && !form.image" class="mx-auto h-12 w-12 text-slate-500 group-hover:text-indigo-400 transition" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+
+                                <img v-else-if="form.image" :src="getImagePreview(form.image)" class="mx-auto h-40 rounded object-contain border border-indigo-500/50">
+                                
+                                <img v-else :src="question.image_url" class="mx-auto h-40 rounded object-contain border border-slate-600">
+                                
+                                <div class="flex text-sm text-slate-400 justify-center mt-2">
+                                    <label class="relative cursor-pointer rounded-md font-medium text-indigo-400 hover:text-indigo-300 focus-within:outline-none">
+                                        <span>{{ form.image ? 'Chọn ảnh khác' : (question.image_url ? 'Thay đổi ảnh' : 'Tải ảnh lên') }}</span>
+                                        <input type="file" @change="form.image = $event.target.files[0]" accept="image/png, image/jpeg" class="sr-only" />
+                                    </label>
+                                </div>
+                                <p v-if="question.image_url && !form.image" class="text-[10px] text-slate-500">Ảnh hiện tại đang được sử dụng</p>
+                            </div>
+                        </div>
+                        <InputError :message="form.errors.image" class="mt-2" />
                     </div>
 
                     <div>
