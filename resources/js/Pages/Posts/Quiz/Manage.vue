@@ -11,6 +11,7 @@ import Checkbox from '@/Components/Checkbox.vue';
 import VueMultiselect from 'vue-multiselect';
 import Pagination from '@/Components/Pagination.vue'; 
 import ActionMessage from '@/Components/ActionMessage.vue'; 
+import MathRender from '@/Components/MathRender.vue'; // <--- THÊM DÒNG NÀY
 
 const props = defineProps({
     post: Object,
@@ -231,11 +232,8 @@ const deleteTemplate = (id) => {
                                 <div class="text-slate-500 font-mono text-xs">>> NO MODULES MOUNTED.</div>
                             </li>
                             <li v-for="question in quizQuestions" :key="'quiz-' + question.id" class="group flex items-start justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-600 transition">
-                                <div class="flex-1 pr-4">
-                                    <p class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">{{ question.question_text }}</p>
-                                    <p class="text-[10px] text-slate-500 font-mono truncate border-l border-slate-700 pl-2">
-                                        {{ getSummary(question.options) }}
-                                    </p>
+                                <div class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">
+                                    <MathRender :content="question.question_text" />
                                 </div>
                                 <Link as="button" method="delete" :data="{ question_id: question.id }" :href="route('post.quiz.detach', post.id)" class="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition" preserve-scroll title="Detach">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -267,7 +265,9 @@ const deleteTemplate = (id) => {
                                         <span v-if="question.subject" class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-indigo-900/30 text-indigo-400 border border-indigo-500/20 rounded">{{ question.subject.name }}</span>
                                         <span v-for="tag in question.tags" :key="tag.id" class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 rounded">{{ tag.name }}</span>
                                     </div>
-                                    <p class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">{{ question.question_text }}</p>
+                                    <div class="text-sm font-bold text-slate-200 mb-1 line-clamp-2">
+                                        <MathRender :content="question.question_text" />
+                                    </div>
                                     <img v-if="question.image_path" :src="'/storage/' + question.image_path" class="mt-2 w-full max-w-[100px] h-auto rounded border border-slate-700 opacity-70">
                                 </div>
                                 <Link as="button" method="post" :data="{ question_id: question.id }" :href="route('post.quiz.attach', post.id)" class="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition border border-emerald-500/20" preserve-scroll title="Attach">

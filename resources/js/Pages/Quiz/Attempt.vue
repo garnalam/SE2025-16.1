@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import MathRender from '@/Components/MathRender.vue'; // <--- Đã import MathRender
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -44,13 +45,6 @@ const enterFullscreen = () => {
             })
             .catch(err => {
                 console.error("Lỗi fullscreen:", err);
-                Swal.fire({
-                    title: 'System Error',
-                    text: 'Fullscreen initialization failed.',
-                    icon: 'error',
-                    background: '#0f172a',
-                    color: '#fff'
-                });
             });
     }
 };
@@ -142,7 +136,6 @@ onUnmounted(() => {
 <template>
     <AppLayout :title="'Question ' + questionNumber" :class="{ 'select-none': isProctored }">
         
-        <!-- Fullscreen Warning Overlay -->
         <div v-if="isProctored && isQuizStarted && !isFullscreen" class="fixed inset-0 bg-[#020617] z-[9999] flex flex-col items-center justify-center text-white text-center p-4">
             <div class="relative mb-8">
                 <div class="absolute inset-0 bg-red-500 blur-3xl opacity-20 animate-pulse"></div>
@@ -158,7 +151,6 @@ onUnmounted(() => {
         <div class="py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="bg-[#0f172a] border border-indigo-500/30 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col min-h-[600px]">
                 
-                <!-- HUD Header -->
                 <div class="px-8 py-6 bg-slate-900/80 border-b border-indigo-500/20 flex flex-col md:flex-row justify-between items-center relative z-10 backdrop-blur-md">
                     <div>
                         <h2 class="text-2xl font-black text-white font-exo uppercase tracking-wide">
@@ -185,17 +177,15 @@ onUnmounted(() => {
                 
                 <form @submit.prevent="saveAndNext" class="flex-1 flex flex-col relative z-10">
                     <div class="p-8 flex-1 overflow-y-auto">
-                        <!-- Question Text -->
                         <div class="mb-8">
-                            <p class="text-xl md:text-2xl font-bold text-slate-200 font-exo leading-relaxed">
-                                {{ question.question_text }}
-                            </p>
-                            <div v-if="question.image_path" class="mt-6 rounded-xl overflow-hidden border border-slate-700 bg-black/50 inline-block max-w-full">
-                                <img :src="'/storage/' + question.image_path" class="max-h-[400px] object-contain">
+                            <div class="text-xl md:text-2xl font-bold text-slate-200 font-exo leading-relaxed">
+                                <MathRender :content="question.question_text" />
+                            </div>
+                            <div v-if="question.image_url" class="mt-6 rounded-xl overflow-hidden border border-slate-700 bg-black/50 inline-block max-w-full">
+                                <img :src="question.image_url" class="max-h-[400px] object-contain">
                             </div>
                         </div>
 
-                        <!-- Options Grid -->
                         <div class="grid grid-cols-1 gap-4">
                             <label v-for="option in question.options" :key="option.id" 
                                 class="relative group cursor-pointer"
@@ -207,8 +197,7 @@ onUnmounted(() => {
                                         ? 'bg-indigo-600/20 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.2)]' 
                                         : 'bg-slate-900 border-slate-700 hover:border-slate-500 hover:bg-slate-800'">
                                     
-                                    <!-- Hexagon Marker -->
-                                    <div class="w-8 h-8 flex items-center justify-center mr-4 transition-all duration-300"
+                                    <div class="w-8 h-8 flex items-center justify-center mr-4 transition-all duration-300 shrink-0"
                                          :class="form.option_id === option.id ? 'text-cyan-400 scale-110' : 'text-slate-600'">
                                         <svg viewBox="0 0 24 24" fill="none" class="w-full h-full" stroke="currentColor" stroke-width="2">
                                             <path d="M12 2l8.66 5v10L12 22 3.34 17V7L12 2z" />
@@ -216,19 +205,17 @@ onUnmounted(() => {
                                         </svg>
                                     </div>
 
-                                    <span class="text-base font-medium font-sans transition-colors duration-300"
+                                    <div class="text-base font-medium font-sans transition-colors duration-300 flex-1"
                                           :class="form.option_id === option.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'">
-                                        {{ option.option_text }}
-                                    </span>
+                                        <MathRender :content="option.option_text" />
+                                    </div>
 
-                                    <!-- Active Scanline -->
                                     <div v-if="form.option_id === option.id" class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent pointer-events-none"></div>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    <!-- Footer Actions -->
                     <div class="p-6 bg-slate-900/80 border-t border-white/5 flex justify-between items-center backdrop-blur-md">
                         <a v-if="questionNumber > 1" 
                            :href="route('quiz.question.show', { attempt: attempt.id, questionNumber: questionNumber - 1 })" 
@@ -245,7 +232,6 @@ onUnmounted(() => {
                     </div>
                 </form>
 
-                <!-- Background Detail -->
                 <div class="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-indigo-900/10 to-transparent pointer-events-none"></div>
             </div>
         </div>

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http; // <-- THÊM ĐỂ GỌI API GEMINI
 use Illuminate\Support\Facades\Log;  // <-- THÊM ĐỂ LOG LỖI
 use Smalot\PdfParser\Parser; // <-- THÊM
 use PhpOffice\PhpWord\IOFactory; // <-- THÊM
+use Illuminate\Support\Facades\Storage; // <--- Thêm dòng này
 class QuestionController extends Controller
 {
     public function __construct()
@@ -57,6 +58,7 @@ class QuestionController extends Controller
                 // Làm cho trường 'is_correct' hiển thị lại
                 $option->makeVisible(['is_correct']);
             });
+            $question->append('image_url');
             return $question;
         });
         return Inertia::render('Questions/Index', [
@@ -86,7 +88,22 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question_text' => 'required|string|min:5',
-            'options' => 'required|array|min:2',
+            'options' => [
+                'required',
+                'array',
+                'min:2',
+                function ($attribute, $value, $fail) {
+                    // Lấy ra danh sách text của các options
+                    $texts = array_map(function ($item) {
+                        return trim($item['text']); // Xóa khoảng trắng thừa
+                    }, $value);
+                    
+                    // So sánh số lượng gốc với số lượng sau khi loại bỏ trùng lặp
+                    if (count($texts) !== count(array_unique($texts))) {
+                        $fail('Các lựa chọn đáp án không được trùng nhau.');
+                    }
+                },
+            ],
             'options.*.text' => 'required|string',
             'correct_option' => 'required|integer',
             
@@ -112,7 +129,8 @@ class QuestionController extends Controller
             $question = $user->questions()->create([
                 'question_text' => $request->question_text,
                 'subject_id' => $subjectId, // <-- Lưu subject_id
-                'type' => 'single_choice'
+                'type' => 'single_choice',
+                'image_path' => $imagePath, // <--- THÊM DÒNG NÀY QUAN TRỌNG NHẤT
             ]);
 
             // Gắn các thẻ (Tags) vào câu hỏi
@@ -136,7 +154,13 @@ class QuestionController extends Controller
     public function edit(Question $question)
     {
         // Tải các quan hệ của câu hỏi này (Môn học và Thẻ của nó)
-        $question->load('subject', 'tags');
+        $question->load(['subject', 'tags', 'options']);
+
+        $question->append('image_url');
+
+        $question->options->each(function ($option) {
+            $option->makeVisible(['is_correct']);
+        });
         
         // Lấy tất cả Môn học và Thẻ của giáo viên (để lấp đầy dropdown)
         $user = auth()->user();
@@ -155,7 +179,22 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question_text' => 'required|string|min:5',
-            'options' => 'required|array|min:2',
+            'options' => [
+                'required',
+                'array',
+                'min:2',
+                function ($attribute, $value, $fail) {
+                    // Lấy ra danh sách text của các options
+                    $texts = array_map(function ($item) {
+                        return trim($item['text']); // Xóa khoảng trắng thừa
+                    }, $value);
+                    
+                    // So sánh số lượng gốc với số lượng sau khi loại bỏ trùng lặp
+                    if (count($texts) !== count(array_unique($texts))) {
+                        $fail('Các lựa chọn đáp án không được trùng nhau.');
+                    }
+                },
+            ],
             'options.*.text' => 'required|string',
             'correct_option' => 'required|integer',
             'subject_id' => 'required|integer|exists:subjects,id',
@@ -184,20 +223,39 @@ class QuestionController extends Controller
             $question->update([
                 'question_text' => $request->question_text,
                 'subject_id' => $subjectId, // <-- Cập nhật subject_id
+                'image_path' => $imagePath // Đảm bảo lưu ảnh
             ]);
 
             // Cập nhật (Sync) các thẻ
             $question->tags()->sync($tagIds);
 
-            // Xóa các lựa chọn cũ
-            $question->options()->delete();
+            // 4. CẬP NHẬT OPTIONS (KHÔNG XÓA MẤT GỐC)
+            $newOptionsData = $request->options; // Dữ liệu từ form gửi lên
+            $existingOptions = $question->options; // Dữ liệu đang có trong DB
 
-            // Thêm các lựa chọn mới
-            foreach ($request->options as $index => $optionData) {
-                $question->options()->create([
-                    'option_text' => $optionData['text'],
-                    'is_correct' => ($index == $request->correct_option)
-                ]);
+            // Duyệt qua từng option gửi lên để cập nhật
+            foreach ($newOptionsData as $index => $data) {
+                // Nếu option cũ vẫn còn ở vị trí này -> Update
+                if (isset($existingOptions[$index])) {
+                    $existingOptions[$index]->update([
+                        'option_text' => $data['text'],
+                        'is_correct' => ($index == $request->correct_option)
+                    ]);
+                } else {
+                    // Nếu là option mới thêm vào -> Create
+                    $question->options()->create([
+                        'option_text' => $data['text'],
+                        'is_correct' => ($index == $request->correct_option)
+                    ]);
+                }
+            }
+
+            // Nếu số lượng option mới ít hơn cũ (ví dụ: giảm từ 4 xuống 3 đáp án)
+            // Thì mới xóa các option thừa ở cuối đi
+            if ($existingOptions->count() > count($newOptionsData)) {
+                $idsToDelete = $existingOptions->slice(count($newOptionsData))->pluck('id');
+                // Chỉ xóa những đáp án thừa, không ảnh hưởng đáp án đầu
+                \App\Models\QuestionOption::destroy($idsToDelete);
             }
         });
 
