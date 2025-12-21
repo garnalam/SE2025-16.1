@@ -16,7 +16,7 @@ use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\GradebookController;
 use App\Http\Controllers\AiStudyController;
-use App\Http\Controllers\SimulationGymController; // <--- [MỚI] Controller Luyện đề
+use App\Http\Controllers\SimulationGymController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\QuestionController;
@@ -417,11 +417,23 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
         // Lưu Notebook (Vở ghi / Excel)
         Route::post('/notebook/save', [StudyCornerController::class, 'storeNotebook'])->name('notebook.save');
+
+        // --- FLASHCARDS ROUTES (MỚI) ---
+        // Tạo bộ thẻ mới
+        Route::post('/flashcards/set', [StudyCornerController::class, 'storeFlashcardSet'])->name('flashcards.set.store');
+        
+        // Thêm thẻ vào bộ
+        Route::post('/flashcards/{setId}/add', [StudyCornerController::class, 'storeFlashcard'])->name('flashcards.add');
+
+        Route::post('/flashcards/{setId}/generate-ai', [StudyCornerController::class, 'generateFlashcardsAi'])
+        ->name('flashcards.generate-ai');
     });
 
-    // Route lưu vết vẽ (Annotation) - Tách riêng để code gọn hơn
+    // Route lưu vết vẽ (Annotation)
     Route::post('/memory-shards/annotation/{documentId}', [StudyCornerController::class, 'saveAnnotation'])
         ->name('memory-shards.annotation.save');
 
+    // Route API lấy Flashcards (Fetch Data cho Viewer)
+    Route::get('/memory-shards/flashcards/{setId}', [StudyCornerController::class, 'getFlashcards'])
+        ->name('memory-shards.flashcards.get');
 });
-
