@@ -205,7 +205,7 @@ class QuizAttemptController extends Controller
 
         $total = count($questionIds);
         $maxPoints = $attempt->post->max_points ?? 100;
-        $finalGrade = ($total > 0) ? ($score / $total) * $maxPoints : 0;
+        $finalGrade = ($total > 0) ? round(($score / $total) * $maxPoints, 2) : 0;
 
         $attempt->update([
             'completed_at' => now(),

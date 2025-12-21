@@ -62,10 +62,6 @@ const passed = scorePercent >= 50;
                                 </div>
                             </div>
 
-                            <p class="text-4xl font-black mb-10 font-exo tracking-tight"
-                               :class="passed ? 'text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400' : 'text-rose-500'">
-                                {{ scorePercent }}% <span class="text-lg font-mono text-slate-500 tracking-normal align-middle">EFFICIENCY</span>
-                            </p>
 
                             <div class="flex justify-center gap-4">
     

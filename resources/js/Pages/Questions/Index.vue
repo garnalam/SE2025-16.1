@@ -10,6 +10,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import axios from 'axios'; 
+import MathRender from '@/Components/MathRender.vue'; // <--- THÊM DÒNG NÀY
 
 const props = defineProps({
     questions: Object,
@@ -264,16 +265,18 @@ const saveGeneratedQuestions = () => {
                                 </span>
                             </div>
 
-                            <p class="font-bold text-slate-200 font-exo text-sm mb-3">{{ question.question_text }}</p>
+                            <div class="mb-3 font-bold text-slate-200 font-exo text-sm">
+                                <MathRender :content="question.question_text" />
+                            </div>
                             
-                            <img v-if="question.image_path" :src="'/storage/' + question.image_path" class="mb-3 w-32 h-auto rounded border border-slate-700">
-                            
+                            <img v-if="question.image_url" :src="question.image_url" class="mb-3 w-32 h-auto rounded border border-slate-700 object-contain bg-black/20">                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div v-for="option in question.options" :key="option.id"
-                                     class="flex items-center gap-2 text-xs font-mono p-2 rounded"
-                                     :class="option.is_correct ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-950 border border-slate-800 text-slate-500'">
-                                    <div class="w-1.5 h-1.5 rounded-full" :class="option.is_correct ? 'bg-emerald-500' : 'bg-slate-700'"></div>
-                                    {{ option.option_text }}
+                                    class="flex items-center gap-2 text-xs font-mono p-2 rounded"
+                                    :class="option.is_correct ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-950 border border-slate-800 text-slate-500'">
+                                    <div class="w-1.5 h-1.5 rounded-full shrink-0" :class="option.is_correct ? 'bg-emerald-500' : 'bg-slate-700'"></div>
+                                    
+                                    <MathRender :content="option.option_text" /> 
                                 </div>
                             </div>
                         </div>
