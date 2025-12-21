@@ -35,6 +35,7 @@
         "@tiptap/vue-3": "^3.13.0",
         "chart.js": "^4.5.1",
         "fabric": "^6.9.1",
+        "katex": "^0.16.27",
         "lucide-vue-next": "^0.561.0",
         "marked": "^17.0.1",
         "qrcode.vue": "^3.6.0",
