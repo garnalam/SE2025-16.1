@@ -26,4 +26,8 @@ class StudentAttended implements ShouldBroadcast
         // Kênh riêng cho từng phiên điểm danh
         return new PrivateChannel('attendance.' . $this->sessionId);
     }
+    public function broadcastAs()
+    {
+        return 'StudentAttended';
+    }
 }
