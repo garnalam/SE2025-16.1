@@ -11,7 +11,7 @@ Xây dựng Ứng dụng với VueJS và PHP
 - **Real-time:** Pusher (Attendance & Notifications)
 
 # Video demo sản phẩm
-Link truy cập video demo sản phẩm: [Điền link video tại đây]
+Link truy cập video demo sản phẩm: [Link video](https://drive.google.com/file/d/1QzB33EepYG-pMB1uo0K2-qgEkofO18W8/view?usp=sharing)
 
 
 # Goal và Business Objective
