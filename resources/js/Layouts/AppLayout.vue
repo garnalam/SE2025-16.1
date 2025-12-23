@@ -108,14 +108,15 @@ const openJoinModal = () => {
                                 </svg>
                                 Sửa Lỗi Sai
                             </Link>
-                            <Link :href="route('memory-shards.index', { teamId: currentTeam?.id })" 
-        :class="route().current('memory-shards.*') ? 'bg-gradient-to-r from-teal-500/20 to-transparent border-l-2 border-teal-500 text-white shadow-[0_0_20px_rgba(20,184,166,0.15)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'"
-        class="flex items-center px-4 py-3 text-sm font-bold rounded-r-xl transition-all duration-300 group">
-        <svg class="mr-3 h-5 w-5 transition-transform group-hover:scale-110 duration-300" :class="route().current('memory-shards.*') ? 'text-teal-400' : 'text-slate-500 group-hover:text-teal-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-        Ghi chú & Flashcards
-    </Link>
+                            <Link 
+                                v-if="currentTeam"  :href="route('memory-shards.index', { teamId: currentTeam.id })" 
+                                :class="route().current('memory-shards.*') ? 'bg-gradient-to-r from-teal-500/20 to-transparent border-l-2 border-teal-500 text-white shadow-[0_0_20px_rgba(20,184,166,0.15)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'"
+                                class="flex items-center px-4 py-3 text-sm font-bold rounded-r-xl transition-all duration-300 group">
+                                <svg class="mr-3 h-5 w-5 transition-transform group-hover:scale-110 duration-300" :class="route().current('memory-shards.*') ? 'text-teal-400' : 'text-slate-500 group-hover:text-teal-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                                Ghi chú & Flashcards
+                            </Link>
 
                             <Link :href="route('gym.index', { team_id: currentTeam?.id })" 
                                 :class="route().current('gym.index') ? 'bg-gradient-to-r from-orange-500/20 to-transparent border-l-2 border-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.15)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'"
