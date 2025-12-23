@@ -34,6 +34,7 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\QuestionImportController;
 use App\Http\Controllers\QuizTemplateController;
+use App\Http\Controllers\Teacher\GradebookController;
 
 // --- Imports Models ---
 use App\Models\Submission;

@@ -14,10 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AnalyticsController extends Controller
 {
-    /**
-     * Trả về dữ liệu phân tích cho một lớp học cụ thể.
-     */
-    public function show(Team $team)
+    public function getClassAnalytics($classroomId)
     {
         // 1. Xác thực
         if (auth()->id() !== $team->user_id) {
@@ -118,6 +115,7 @@ class AnalyticsController extends Controller
         $labels = array_keys($counts);
 
         foreach ($counts as $count) {
+            // Đã kiểm tra $studentCount > 0 ở đầu hàm, nhưng check lại cho chắc
             $percentage = ($studentCount > 0) ? round(($count / $studentCount) * 100, 2) : 0;
             $data[] = $percentage;
         }

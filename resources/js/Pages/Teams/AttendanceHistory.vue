@@ -151,6 +151,7 @@ const props = defineProps({
     sessions: Array,
     students: Array,
     canEdit: Boolean,
+    totalSessions: Number,
 });
 
 // Helper: Lấy chữ cái đầu tên
