@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 
-const model = defineModel({
-    type: String,
-    required: true,
+defineProps({
+    modelValue: String,
 });
+
+defineEmits(['update:modelValue']);
 
 const input = ref(null);
 
@@ -19,8 +20,9 @@ defineExpose({ focus: () => input.value.focus() });
 
 <template>
     <textarea
-        v-model="model"
-        class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
         ref="input"
+        class="border-slate-700 bg-slate-900 text-white focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm placeholder-slate-500"
+        :value="modelValue"
+        @input="$emit('update:modelValue', $event.target.value)"
     ></textarea>
 </template>

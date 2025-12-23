@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-[x-cloak] {
-    display: none;
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-white antialiased;
+  }
+}
+
+/* --- FIX LỖI TÀNG HÌNH CHỮ (QUAN TRỌNG) --- */
+
+/* 1. Fix lỗi khi Bôi đen (Selection) */
+::selection {
+    background-color: #facc15 !important; /* Nền Vàng */
+    color: #000000 !important; /* Chữ Đen */
+    -webkit-text-fill-color: #000000 !important;
+}
+
+::-moz-selection {
+    background-color: #facc15 !important;
+    color: #000000 !important;
+}
+
+/* 2. Fix lỗi chữ ĐẬM (Bold) bị đen xì trên nền tối */
+/* Ép buộc tất cả chữ đậm trong trình soạn thảo phải màu trắng/sáng */
+.ProseMirror strong, 
+.ProseMirror b {
+    color: #f1f5f9 !important; /* Slate-100 (Trắng sáng) */
+    font-weight: 800 !important;
+}
+
+/* 3. Fix lỗi Tiêu đề (H1, H2...) bị tối màu */
+.ProseMirror h1, 
+.ProseMirror h2, 
+.ProseMirror h3 {
+    color: #ffffff !important; /* Trắng tinh */
+}
+
+/* 4. Fix màu chữ thường trong Editor */
+.ProseMirror p {
+    color: #cbd5e1 !important; /* Slate-300 (Xám sáng) */
 }

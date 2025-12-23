@@ -12,10 +12,6 @@ use App\Actions\Jetstream\UpdateTeamName;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Jetstream\Jetstream;
 
-// ✅ THÊM CÁC DÒNG NÀY VÀO
-use App\Models\Team;
-use App\Models\User;
-use Illuminate\Support\Facades\Gate;
 
 class JetstreamServiceProvider extends ServiceProvider
 {
@@ -41,41 +37,25 @@ class JetstreamServiceProvider extends ServiceProvider
         Jetstream::removeTeamMembersUsing(RemoveTeamMember::class);
         Jetstream::deleteTeamsUsing(DeleteTeam::class);
         Jetstream::deleteUsersUsing(DeleteUser::class);
-        
-        // ✅ THÊM TOÀN BỘ KHỐI CODE NÀY VÀO
-        // Đây là phần định nghĩa quyền hạn quan trọng bị thiếu
-        Gate::define('addTeamMember', function (User $user, Team $team) {
-            return $user->ownsTeam($team);
-        });
-
-        Gate::define('updateTeamMember', function (User $user, Team $team, User $teamMember) {
-            return $user->ownsTeam($team);
-        });
-
-        Gate::define('removeTeamMember', function (User $user, Team $team, User $teamMember) {
-            return $user->ownsTeam($team);
-        });
     }
 
     /**
      * Configure the roles and permissions that are available within the application.
      */
-    protected function configurePermissions(): void
+protected function configurePermissions(): void
     {
         Jetstream::defaultApiTokenPermissions(['read']);
 
-        // Gợi ý: Bạn có thể đổi 'admin' thành 'teacher' (Giáo viên) cho dễ hiểu
-        Jetstream::role('admin', 'Giáo viên', [
-            'create',
-            'read',
-            'update',
-            'delete',
-        ])->description('Giáo viên có thể thực hiện mọi hành động trong lớp.');
+        // Giữ nguyên phần định nghĩa Role này của bạn là ĐÚNG
+        Jetstream::role('teacher', 'Giáo viên', [
+            'post:create',
+            'post:read',
+            'post:update',
+            'post:delete',
+        ])->description('Giáo viên quản lý lớp học.');
 
-        // Gợi ý: Bạn có thể đổi 'editor' thành 'student' (Học sinh)
-        Jetstream::role('editor', 'Học sinh', [
-            'read',
-            'create', // Cho phép học sinh tạo bài (ví dụ: đăng câu hỏi trên diễn đàn)
-        ])->description('Học sinh có thể xem nội dung và tương tác.');
+        Jetstream::role('student', 'Học sinh', [
+            'post:read',
+        ])->description('Học sinh tham gia lớp học.');
     }
 }

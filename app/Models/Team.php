@@ -7,14 +7,25 @@ use Laravel\Jetstream\Events\TeamCreated;
 use Laravel\Jetstream\Events\TeamDeleted;
 use Laravel\Jetstream\Events\TeamUpdated;
 use Laravel\Jetstream\Team as JetstreamTeam;
-
-// ✅ THÊM CÁC DÒNG "USE" NÀY VÀO ĐẦU FILE
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Post;
-
+use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <--- 1. THÊM DÒNG NÀY
+use Laravel\Jetstream\Jetstream; // <--- 2. THÊM DÒNG NÀY
+use App\Models\AttendanceSession;
 class Team extends JetstreamTeam
 {
     use HasFactory;
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'personal_team' => 'boolean',
+        'grade_weights' => 'array',
+        'penalty_policy' => 'array', // <--- THÊM DÒNG NÀY
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -24,12 +35,14 @@ class Team extends JetstreamTeam
     protected $fillable = [
         'name',
         'personal_team',
+        'join_code',
+        'grading_type',
     ];
 
     /**
      * The event map for the model.
      *
-     * @var array<string, class-string>
+     * @var array<class-string, class-string>
      */
     protected $dispatchesEvents = [
         'created' => TeamCreated::class,
@@ -38,20 +51,59 @@ class Team extends JetstreamTeam
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
+     * Khởi động các model event.
      */
-    protected $casts = [
-        'personal_team' => 'boolean',
-    ];
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($team) {
+            if ($team->personal_team === false) {
+                $team->join_code = self::generateUniqueJoinCode();
+            }
+        });
+    }
+
+    protected static function generateUniqueJoinCode(): string
+    {
+        do {
+            $code = sprintf('%s-%s-%s',
+                Str::lower(Str::random(3)),
+                Str::lower(Str::random(3)),
+                Str::lower(Str::random(3))
+            );
+        } while (static::where('join_code', $code)->exists());
+
+        return $code;
+    }
+
+    // --- 👇 ĐÂY LÀ PHẦN QUAN TRỌNG BẠN ĐANG THIẾU 👇 ---
     
-    // ✅ THÊM TOÀN BỘ PHƯƠNG THỨC NÀY VÀO
     /**
-     * Lấy tất cả các bài đăng của lớp học.
+     * Ghi đè quan hệ users để lấy thêm cột 'role'
      */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(Jetstream::userModel(), Jetstream::membershipModel())
+                    ->withPivot('role') // Quan trọng nhất: Lấy cột role từ bảng trung gian
+                    ->withTimestamps()
+                    ->as('membership');
+    }
+
+    // ---------------------------------------------------
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
     }
+
+    public function topics(): HasMany
+    {
+        return $this->hasMany(Topic::class);
+    }
+
+    public function attendanceSessions()
+{
+    return $this->hasMany(AttendanceSession::class);
+}
 }
