@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue';
 import MathRender from '@/Components/MathRender.vue';
 import TextArea from '@/Components/TextArea.vue';
-import MathRender from '@/Components/MathRender.vue'; // <-- Phải import cái này
 
 const props = defineProps({
     modelValue: String,
